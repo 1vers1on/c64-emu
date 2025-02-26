@@ -12,6 +12,8 @@ Bus::Bus() {
         ram[i] = 0x00;
         ramFile.write(reinterpret_cast<char*>(&ram[i]), 1);
     }
+    dataDirectionRegister = 0b11111000;
+    dataRegister = 0b00000111;
 }
 
 Bus::~Bus() {
@@ -22,7 +24,7 @@ void Bus::write(uint16_t addr, uint8_t data) {
     if (addr == 0x0000) dataDirectionRegister = data;
     if (addr == 0x0001) dataRegister = data;
 
-    if ((dataRegister & dataDirectionRegister & 0b011) == 0b00) {
+    if ((dataRegister & 0b011) == 0b00) {
         ram[addr] = data;
         ramFile.seekp(addr);
         ramFile.write(reinterpret_cast<char*>(&data), 1);
@@ -30,7 +32,7 @@ void Bus::write(uint16_t addr, uint8_t data) {
     }
 
     if (addr >= 0xA000 && addr <= 0xBFFF) {
-        if ((dataRegister & dataDirectionRegister & 0b011) == 0b01 || (dataRegister & dataDirectionRegister & 0b011) == 0b10) {
+        if ((dataRegister & 0b011) == 0b01 || (dataRegister & 0b011) == 0b10) {
             ram[addr] = data;
             ramFile.seekp(addr);
             ramFile.write(reinterpret_cast<char*>(&data), 1);
@@ -39,7 +41,7 @@ void Bus::write(uint16_t addr, uint8_t data) {
         } 
     }
     if (addr >= 0xE000 && addr <= 0xFFFF) {
-        if ((dataRegister & dataDirectionRegister & 0b011) == 0b01) {
+        if ((dataRegister & 0b011) == 0b01) {
             ram[addr] = data;
             ramFile.seekp(addr);
             ramFile.write(reinterpret_cast<char*>(&data), 1);
@@ -48,7 +50,7 @@ void Bus::write(uint16_t addr, uint8_t data) {
         }
     }
     if (addr >= 0xD000 && addr <= 0xDFFF) {
-        if ((dataRegister & dataDirectionRegister & 0b100) == 0b100) {
+        if ((dataRegister & 0b100) == 0b100) {
             handleIoWrite(addr, data);
         } else {
             std::cerr << "Attempted to write to ROM" << std::endl;
@@ -62,27 +64,27 @@ void Bus::write(uint16_t addr, uint8_t data) {
 uint8_t Bus::read(uint16_t addr) {
     // std::cout << "Reading from address: " << std::hex << addr << std::dec << "\n";
     if (addr == 0x0000) return dataDirectionRegister;
-    if (addr == 0x0001) return dataRegister & dataDirectionRegister;    
-    if ((dataRegister & dataDirectionRegister & 0b011) == 0b00) {
+    if (addr == 0x0001) return dataRegister ;    
+    if ((dataRegister  & 0b011) == 0b00) {
         return ram[addr];
     }
 
     if (addr >= 0xA000 && addr <= 0xBFFF) {
-        if ((dataRegister & dataDirectionRegister & 0b011) == 0b01 || (dataRegister & dataDirectionRegister & 0b011) == 0b10) {
+        if ((dataRegister & 0b011) == 0b01 || (dataRegister & 0b011) == 0b10) {
             return ram[addr];
         } else {
             return basicRom[addr - 0xA000];
         } 
     }
     if (addr >= 0xE000 && addr <= 0xFFFF) {
-        if ((dataRegister & dataDirectionRegister & 0b011) == 0b01) {
+        if ((dataRegister & 0b011) == 0b01) {
             return ram[addr];
         } else {
             return kernelRom[addr - 0xE000];
         }
     }
     if (addr >= 0xD000 && addr <= 0xDFFF) {
-        if ((dataRegister & dataDirectionRegister & 0b100) == 0b100) {
+        if ((dataRegister & 0b100) == 0b100) {
             return handleIoRead(addr);
         } else {
             return charRom[addr - 0xD000];
