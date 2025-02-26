@@ -2,6 +2,9 @@
 
 #include <cstdint>
 #include <vector>
+#include <fstream>
+#include <cia1.hpp>
+#include <vic.hpp>
 
 class Bus {
 public:
@@ -16,6 +19,21 @@ public:
 
     void writeBytes(uint16_t addr, const uint8_t *data, uint16_t size);
 
+    uint8_t handleIoRead(uint16_t addr);
+    void handleIoWrite(uint16_t addr, uint8_t data);
+
+    void loadC64rom(const char *filename);
+    void loadCharacterRom(const char *filename);
+
+    uint8_t dataDirectionRegister;
+    uint8_t dataRegister = 0b00000111;
+
+    CIA1 *cia1;
+    VIC *vic;
 private:
+    std::ofstream ramFile;
     uint8_t ram[0xFFFF];
+    uint8_t basicRom[0x2000];
+    uint8_t kernelRom[0x2000];
+    uint8_t charRom[0x1000];
 };

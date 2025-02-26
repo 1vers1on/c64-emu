@@ -1,4 +1,4 @@
 compile_commands.json
 main
-bin
-.cache
+bin/
+.cache/

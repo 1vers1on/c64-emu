@@ -6,6 +6,7 @@
 #include <array>
 #include <functional>
 #include <vector>
+#include <tuple>
 // https://www.nesdev.org/6502_cpu.txt
 // https://www.oxyron.de/html/opcodes02.html
 // https://www.nesdev.org/wiki/Instruction_reference
@@ -78,10 +79,13 @@ public:
     void pushByte(uint8_t data);
     void pushWord(uint16_t data);
 
+    void triggerIrq();
+
     uint8_t popByte();
     uint16_t popWord();
 
 private:
+    std::string currentInstruction;
     std::ifstream logFile;
     size_t lastCycles;
     size_t oldPC;
@@ -91,6 +95,7 @@ private:
 
     int loops;
 
-    std::array<std::pair<std::function<void(CPU *, AddressingMode)>, AddressingMode>, 256> instructions;
+    std::array<std::tuple<std::function<void(CPU *, AddressingMode)>, AddressingMode, std::string>, 256> instructions;
 
+    bool irqPending = false;
 };

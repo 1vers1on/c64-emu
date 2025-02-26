@@ -11,8 +11,8 @@ CFLAGS := -std=c11 -Werror -g -I$(INCLUDE_DIR) -MMD -MP
 CXXFLAGS := -std=c++17 -Werror -g -I$(INCLUDE_DIR) -MMD -MP
 LDFLAGS := -lm
 ifeq ($(BUILD_TYPE), debug)
-CFLAGS += -O0 -DDEBUG
-CXXFLAGS += -O0 -DDEBUG
+CFLAGS += -O1 -DDEBUG
+CXXFLAGS += -O1 -DDEBUG
 else
 CFLAGS += -O2
 CXXFLAGS += -O2
