@@ -6,11 +6,9 @@
 Bus::Bus() {
     cia1 = new CIA1();
     vic = new VIC();
-    ramFile.open("ram.bin", std::ios::binary | std::ios::out);
 
     for (int i = 0; i < 0xFFFF; i++) {
         ram[i] = 0x00;
-        ramFile.write(reinterpret_cast<char*>(&ram[i]), 1);
     }
     dataDirectionRegister = 0b11111000;
     dataRegister = 0b00000111;
@@ -26,16 +24,12 @@ void Bus::write(uint16_t addr, uint8_t data) {
 
     if ((dataRegister & 0b011) == 0b00) {
         ram[addr] = data;
-        ramFile.seekp(addr);
-        ramFile.write(reinterpret_cast<char*>(&data), 1);
         return;
     }
 
     if (addr >= 0xA000 && addr <= 0xBFFF) {
         if ((dataRegister & 0b011) == 0b01 || (dataRegister & 0b011) == 0b10) {
             ram[addr] = data;
-            ramFile.seekp(addr);
-            ramFile.write(reinterpret_cast<char*>(&data), 1);
         } else {
             std::cerr << "Attempted to write to ROM" << std::endl;
         } 
@@ -43,8 +37,6 @@ void Bus::write(uint16_t addr, uint8_t data) {
     if (addr >= 0xE000 && addr <= 0xFFFF) {
         if ((dataRegister & 0b011) == 0b01) {
             ram[addr] = data;
-            ramFile.seekp(addr);
-            ramFile.write(reinterpret_cast<char*>(&data), 1);
         } else {
             std::cerr << "Attempted to write to ROM" << std::endl;
         }
@@ -57,8 +49,6 @@ void Bus::write(uint16_t addr, uint8_t data) {
         }
     }
     ram[addr] = data;
-    ramFile.seekp(addr);
-    ramFile.write(reinterpret_cast<char*>(&data), 1);
 }
 
 uint8_t Bus::read(uint16_t addr) {
