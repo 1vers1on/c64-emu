@@ -46,7 +46,7 @@ private:
     std::ofstream ramFile;
     uint8_t ram[0xFFFF];
     uint8_t basicRom[0x2000];
-    uint8_t kernelRom[0x2000];
+    uint8_t kernalRom[0x2000];
     uint8_t charRom[0x1000];
     uint8_t colorRam[0x0400];
 };

@@ -1028,7 +1028,9 @@ static void XAS(CPU *cpu, AddressingMode mode) {
     cpu->stepCycles(1);
 }
 
-CPU::CPU() {
+CPU::CPU(Bus *bus) {
+    this->bus = bus;
+
     instructions.fill({unkownInstruction, AddressingMode::IMPLIED, "UNK"});
 
     instructions[0x9B] = {XAS, AddressingMode::ABSOLUTE_Y, "XAS"};
@@ -1322,17 +1324,6 @@ CPU::CPU() {
 
     instructions[0xC8] = {INY, AddressingMode::IMPLIED, "INY"};
     instructions[0xE8] = {INX, AddressingMode::IMPLIED, "INX"};
-
-    bus = new Bus();
-    bus->cia1->setCpu(this);
-    bus->cia2->setCpu(this);
-    bus->vic->setCpu(this);
-
-    this->setCycleCallback([this]() {
-        this->bus->cia1->tick();
-        this->bus->cia2->tick();
-        this->bus->vic->tick();
-    });
 }
 
 

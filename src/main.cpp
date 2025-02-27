@@ -5,7 +5,8 @@
 #include <vector>
 #include <cstdint>
 #include <cstring>
-#include <cpu.hpp>
+// #include <cpu.hpp>
+#include <System.hpp>
 #include <SDL2/SDL.h>
 #include <algorithm>
 #include <cctype>
@@ -135,21 +136,22 @@ int main() {
 
     bool running = true;
     // SDL_Event event;
-    CPU cpu;
+    System system;
     // render_screen(texture, renderer, cpu.bus->vic->screen);
+    system.loadRoms("c64.kernal.bin", "c64.chrom.bin");
 
-    cpu.bus->loadC64rom("c64.kernel.bin");
-    cpu.bus->loadCharacterRom("c64.chrom.bin");
+    // cpu.bus->loadC64rom("c64.kernal.bin");
+    // cpu.bus->loadCharacterRom("c64.chrom.bin");
     int i = 0;
-    cpu.bus->vic->setFramebufferCallback([&i](std::array<uint32_t, 40 * 25 * 8 * 8>& screen) {
+    system.vic->setFramebufferCallback([&i](std::array<uint32_t, 40 * 25 * 8 * 8>& screen) {
         write_bmp(screen, "output/" + std::to_string(i % 2) + ".bmp");
         i++;
     });
-    cpu.powerOn();
+
+    system.powerOn();
 
     while (running) {
-        cpu.executeOnce();
-        cpu.bus->sid->tick();
+        system.step();
 
         // if (cpu.bus->vic->needsRender) {
         //     while (SDL_PollEvent(&event)) {

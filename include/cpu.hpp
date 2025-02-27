@@ -48,7 +48,7 @@ enum class AddressingMode {
 
 class CPU {
 public:
-    CPU();
+    CPU(Bus* bus);
     ~CPU();
     
     void powerOn();

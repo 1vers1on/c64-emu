@@ -4,12 +4,6 @@
 #include <fstream>
 
 Bus::Bus() {
-    cia1 = new CIA1(this);
-    cia2 = new CIA2(this);
-    vic = new VIC(this);
-    sid = new SID();
-    input = new Input();
-
     for (int i = 0; i < 0xFFFF; i++) {
         ram[i] = 0x00;
     }
@@ -71,7 +65,7 @@ uint8_t Bus::read(uint16_t addr) {
         if ((dataRegister & 0b011) == 0b01) {
             return ram[addr];
         } else {
-            return kernelRom[addr - 0xE000];
+            return kernalRom[addr - 0xE000];
         }
     }
     if (addr >= 0xD000 && addr <= 0xDFFF) {
@@ -126,7 +120,7 @@ void Bus::loadC64rom(const char *filename) {
     }
 
     file.read(reinterpret_cast<char*>(basicRom), 0x2000);
-    file.read(reinterpret_cast<char*>(kernelRom), 0x2000);
+    file.read(reinterpret_cast<char*>(kernalRom), 0x2000);
 
     file.close();
 }
