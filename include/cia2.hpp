@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <cstddef>
+#include <bus.hpp>
 
 #define PORTA 0
 #define PORTB 1
@@ -20,11 +21,12 @@
 #define TIMER_A_CONTROL_REGISTER 14
 #define TIMER_B_CONTROL_REGISTER 15
 
+class Bus;
 class CPU;
 
 class CIA2 {
 public:
-    CIA2();
+    CIA2(Bus* bus);
     ~CIA2();
 
     void write(uint16_t addr, uint8_t data);
@@ -44,6 +46,7 @@ private:
     uint16_t timerBReload;
     size_t lastCycle;
     CPU *cpu;
+    Bus *bus;
     uint8_t registers[0x10];
     // uint8_t portA;
     // uint8_t portB;

@@ -35,6 +35,8 @@ public:
 
     std::array<uint32_t, 40 * 25 * 8 * 8> screen = {};
 
+    uint16_t bankAddress = 0x0000;
+
 
 private:
     void handleRasterInterrupts();
@@ -46,5 +48,12 @@ private:
     uint16_t rasterLine = 0; // current raster line
     size_t rasterCycle = 0; // current raster cycle
     size_t cycleCounter = 0; // cycle counter
+
+    bool bitmapMode = false;
+    bool multiColorMode = false;
+
+    uint16_t charMemOffset = 0;
+    uint16_t screenMemoryOffset = 0;
+    uint16_t bitmapOffset = 0;
 };
     

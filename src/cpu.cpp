@@ -389,6 +389,16 @@ static void ADC(CPU *cpu, AddressingMode mode) {
     uint16_t address = cpu->getAddress(mode);
     uint8_t data = cpu->bus->read(address);
     uint16_t result = cpu->A + data + (cpu->P & CARRY_FLAG);
+    
+    if (cpu->P & DECIMAL_MODE_FLAG) {
+        if ((cpu->A & 0x0F) + (data & 0x0F) + (cpu->P & CARRY_FLAG) > 0x09) {
+            result += 0x06;
+        }
+        if (result > 0x99) {
+            result += 0x60;
+        }
+    }
+
     cpu->P &= ~ZERO_FLAG;
     cpu->P &= ~NEGATIVE_FLAG;
     cpu->P &= ~CARRY_FLAG;
@@ -413,6 +423,16 @@ static void SBC(CPU *cpu, AddressingMode mode) {
     uint16_t address = cpu->getAddress(mode);
     uint8_t data = cpu->bus->read(address);
     uint16_t result = cpu->A - data - (1 - (cpu->P & CARRY_FLAG));
+
+    if (cpu->P & DECIMAL_MODE_FLAG) {
+        if ((cpu->A & 0x0F) < (data & 0x0F) + (1 - (cpu->P & CARRY_FLAG))) {
+            result -= 0x06;
+        }
+        if (result & 0x100) {
+            result -= 0x60;
+        }
+    }
+
     cpu->P &= ~ZERO_FLAG;
     cpu->P &= ~NEGATIVE_FLAG;
     cpu->P &= ~CARRY_FLAG;

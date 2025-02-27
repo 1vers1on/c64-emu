@@ -2,7 +2,8 @@
 #include <cpu.hpp>
 #include <iostream>
 
-CIA2::CIA2() {
+CIA2::CIA2(Bus* bus) {
+    this->bus = bus;
     for (int i = 0; i < 0x10; i++) {
         registers[i] = 0x00;
     }
@@ -14,6 +15,22 @@ CIA2::~CIA2() {
 void CIA2::write(uint16_t addr, uint8_t data) {
     std::cout << "CIA2 write to address: " << std::hex << addr << " with data: " << static_cast<int>(data) << std::dec << std::endl;
     addr &= 0x0F;
+    if (addr == PORTA) {
+        switch (registers[PORTA] & 0b11) {
+            case 0b11:
+                bus->vic->bankAddress = 0x0000;
+                break;
+            case 0b10:
+                bus->vic->bankAddress = 0x4000;
+                break;
+            case 0b01:
+                bus->vic->bankAddress = 0x8000;
+                break;
+            case 0b00:
+                bus->vic->bankAddress = 0xC000;
+                break;
+        }
+    }
     if (addr == TIMER_A_LOW) {
         timerAReload = (timerAReload & 0xFF00) | data;
         timerA = timerAReload;
@@ -59,7 +76,7 @@ void CIA2::tick() {
                 triggerInterrupt(0);
             }
 
-            if (!(registers[TIMER_B_CONTROL_REGISTER] & 0b1000)) {
+            if (!(registers[TIMER_A_CONTROL_REGISTER] & 0b1000)) {
                 timerA = timerAReload;
             } else {
                 registers[TIMER_A_CONTROL_REGISTER] &= 0b11111110;

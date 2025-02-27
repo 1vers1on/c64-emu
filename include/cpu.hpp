@@ -44,8 +44,6 @@ enum class AddressingMode {
 #define OVERFLOW_FLAG 0b01000000
 #define NEGATIVE_FLAG 0b10000000
 
-#define CLOCK_SPEED 985000
-
 #include <fstream>
 
 class CPU {

@@ -1,6 +1,7 @@
 #include <vic.hpp>
 
 #include <iostream>
+#include <bitset>
 
 VIC::VIC(Bus* bus) {
     this->bus = bus;
@@ -15,7 +16,7 @@ VIC::~VIC() {
 }
 
 uint8_t VIC::read(uint16_t addr) {
-    // std::cout << "VIC read from address: " << std::hex << addr << std::dec << std::endl;
+    std::cout << "VIC read from address: " << std::hex << addr << std::dec << std::endl;
     addr &= 0x2F;
     if (addr == 0x11) {
         uint8_t value = registers[0x11];
@@ -31,9 +32,33 @@ uint8_t VIC::read(uint16_t addr) {
 }
 
 void VIC::write(uint16_t addr, uint8_t value) {
-    std::cout << "VIC write to address: " << std::hex << addr << " with data: " << static_cast<int>(value) << std::dec << std::endl;
-    addr &= 0x2F;
-    if (addr == 0x11) {        
+    addr &= 0xFF;
+    if (addr == 0x11) {
+        if (value & 0x20) {
+            bitmapMode = true;
+        } else {
+            bitmapMode = false;
+        }
+    }
+
+    if (addr == 0x16) {
+        if (value & 0x10) {
+            multiColorMode = true;
+        } else {
+            multiColorMode = false;
+        }
+    }
+    
+    if (addr == 0x18) {
+        // get bits 1-3
+        charMemOffset = ((value & 0x07) - 1) * 0x800; // subtracting one is the only way this works
+        if (value & 0x08) {
+            bitmapOffset = 0x2000;
+        } else {
+            bitmapOffset = 0x0000;
+        }
+
+        screenMemoryOffset = ((value & 0xF0) >> 4) * 0x400;
     }
     if (addr == 0x19) { // icr
         registers[0x19] &= ~value; // clear interrupt
@@ -97,17 +122,34 @@ void VIC::renderScanline() {
     std::vector<uint32_t> lineBuffer(320, 0);
 
     for (int cellX = 0; cellX < 40; cellX++) {
-        uint16_t screenAddr = 0x0400 + charRow * 40 + cellX;
-        uint8_t charCode = bus->read(screenAddr);
+        uint16_t screenAddr = charRow * 40 + cellX;
+        uint8_t charCode = bus->read(screenAddr + bankAddress + screenMemoryOffset);
         uint8_t colorCode = bus->read(0xD800 + charRow * 40 + cellX);
 
         uint16_t charRomAddr = charCode * 8 + pixelRowWithinChar;
-        uint8_t charData = bus->readCharRom(charRomAddr);
+        uint8_t charData = 0;
+
+        if (bankAddress == 0x0000 || bankAddress == 0x8000) {
+            if (charMemOffset == 0x1000 || charMemOffset == 0x1800) {
+                charData = bus->readCharRom(charRomAddr);
+
+            } else {
+                charData = bus->read(charRomAddr + charMemOffset + bankAddress);
+            }
+        } else if (bitmapMode) {
+            charData = bus->read(bitmapOffset + bankAddress + screenAddr); // ?
+        } else {
+            charData = bus->read(charRomAddr + charMemOffset + bankAddress);
+        }
 
         uint32_t cellPixels[8];
         for (int bit = 0; bit < 8; bit++) {
             bool pixelOn = (charData >> (7 - bit)) & 0x01;
-            cellPixels[bit] = pixelOn ? getColor(colorCode) : getColor(registers[0x21]);
+            if (bitmapMode) {
+                cellPixels[bit] = pixelOn ? getColor(charCode & 0x0F) : getColor((charCode & 0xF0) >> 4);
+            } else {
+                cellPixels[bit] = pixelOn ? getColor(colorCode) : getColor(registers[0x21]);
+            }
         }
 
         for (int bit = 0; bit < 8; bit++) {

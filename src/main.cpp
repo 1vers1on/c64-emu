@@ -115,66 +115,68 @@ void render_screen(SDL_Texture* texture, SDL_Renderer* renderer, const std::arra
 }
 
 int main() {
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-        std::cerr << "SDL could not initialize! SDL_Error: " << SDL_GetError() << std::endl;
-        return 1;
-    }
+    // if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+    //     std::cerr << "SDL could not initialize! SDL_Error: " << SDL_GetError() << std::endl;
+    //     return 1;
+    // }
     
-    SDL_Window *window = SDL_CreateWindow("Framebuffer Example",
-        SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        320 * 2, 200 * 2, SDL_WINDOW_SHOWN);
-    if (!window) {
-        std::cerr << "Window could not be created! SDL_Error: " << SDL_GetError() << std::endl;
-        SDL_Quit();
-        return 1;
-    }
+    // SDL_Window *window = SDL_CreateWindow("Framebuffer Example",
+    //     SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+    //     320 * 2, 200 * 2, SDL_WINDOW_SHOWN);
+    // if (!window) {
+    //     std::cerr << "Window could not be created! SDL_Error: " << SDL_GetError() << std::endl;
+    //     SDL_Quit();
+    //     return 1;
+    // }
 
-    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-    SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
-                                             SDL_TEXTUREACCESS_STREAMING, 320, 200);
+    // SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    // SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
+    //                                          SDL_TEXTUREACCESS_STREAMING, 320, 200);
 
     bool running = true;
-    SDL_Event event;
+    // SDL_Event event;
     CPU cpu;
-    render_screen(texture, renderer, cpu.bus->vic->screen);
+    // render_screen(texture, renderer, cpu.bus->vic->screen);
 
     cpu.bus->loadC64rom("c64.kernel.bin");
     cpu.bus->loadCharacterRom("c64.chrom.bin");
     int i = 0;
-    // cpu.bus->vic->setFramebufferCallback([&i](std::array<uint32_t, 40 * 25 * 8 * 8>& screen) {
-    //     write_bmp(screen, "output/" + std::to_string(i % 2) + ".bmp");
-    //     i++;
-    // });
+    cpu.bus->vic->setFramebufferCallback([&i](std::array<uint32_t, 40 * 25 * 8 * 8>& screen) {
+        write_bmp(screen, "output/" + std::to_string(i % 2) + ".bmp");
+        i++;
+    });
     cpu.powerOn();
 
     while (running) {
         cpu.executeOnce();
-        if (cpu.bus->vic->needsRender) {
-            while (SDL_PollEvent(&event)) {
-                if (event.type == SDL_QUIT) {
-                    running = false;
-                }
-                if (event.type == SDL_KEYDOWN) {
-                    // the key needs to be all uppercase for the input to work
-                    std::string key = SDL_GetKeyName(event.key.keysym.sym);
-                    std::transform(key.begin(), key.end(), key.begin(), ::toupper);
-                    cpu.bus->input->setKeyPressed(key, true);
-                }
-                if (event.type == SDL_KEYUP) {
-                    std::string key = SDL_GetKeyName(event.key.keysym.sym);
-                    std::transform(key.begin(), key.end(), key.begin(), ::toupper);
-                    cpu.bus->input->setKeyPressed(key, false);
-                }
-            }
-            render_screen(texture, renderer, cpu.bus->vic->screen);
-            cpu.bus->vic->needsRender = false;
-            SDL_Delay(20); // if you dont do this your computer will explode
-            // std::cout << cpu.dump() << std::endl;
-        }
+        cpu.bus->sid->tick();
+
+        // if (cpu.bus->vic->needsRender) {
+        //     while (SDL_PollEvent(&event)) {
+        //         if (event.type == SDL_QUIT) {
+        //             running = false;
+        //         }
+        //         if (event.type == SDL_KEYDOWN) {
+        //             // the key needs to be all uppercase for the input to work
+        //             std::string key = SDL_GetKeyName(event.key.keysym.sym);
+        //             std::transform(key.begin(), key.end(), key.begin(), ::toupper);
+        //             cpu.bus->input->setKeyPressed(key, true);
+        //         }
+        //         if (event.type == SDL_KEYUP) {
+        //             std::string key = SDL_GetKeyName(event.key.keysym.sym);
+        //             std::transform(key.begin(), key.end(), key.begin(), ::toupper);
+        //             cpu.bus->input->setKeyPressed(key, false);
+        //         }
+        //     }
+        //     render_screen(texture, renderer, cpu.bus->vic->screen);
+        //     cpu.bus->vic->needsRender = false;
+        //     SDL_Delay(20); // if you dont do this your computer will explode
+        //     // std::cout << cpu.dump() << std::endl;
+        // }
     }
-    SDL_DestroyTexture(texture);
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-    SDL_Quit();
+    // SDL_DestroyTexture(texture);
+    // SDL_DestroyRenderer(renderer);
+    // SDL_DestroyWindow(window);
+    // SDL_Quit();
     return 0;
 }

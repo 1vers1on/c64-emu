@@ -5,8 +5,9 @@
 
 Bus::Bus() {
     cia1 = new CIA1(this);
-    cia2 = new CIA2();
+    cia2 = new CIA2(this);
     vic = new VIC(this);
+    sid = new SID();
     input = new Input();
 
     for (int i = 0; i < 0xFFFF; i++) {
@@ -99,6 +100,7 @@ void Bus::writeBytes(uint16_t addr, const uint8_t *data, uint16_t size) {
 }
 
 uint8_t Bus::handleIoRead(uint16_t addr) {
+    if (addr >= 0xD400 && addr < 0xD800) return sid->read(addr);
     if (addr >= 0xD800 && addr < 0xDBFF) return colorRam[addr - 0xD800];
     if (addr >= 0xD000 && addr < 0xD400) return vic->read(addr);
     if (addr >= 0xDC00 && addr < 0xDD00) return cia1->read(addr);
@@ -107,6 +109,7 @@ uint8_t Bus::handleIoRead(uint16_t addr) {
 }
 
 void Bus::handleIoWrite(uint16_t addr, uint8_t data) {
+    if (addr >= 0xD400 && addr < 0xD800) sid->write(addr, data);
     if (addr >= 0xD800 && addr < 0xDBFF) {
         colorRam[addr - 0xD800] = data;
     }
