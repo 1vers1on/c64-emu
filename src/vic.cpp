@@ -85,7 +85,7 @@ void VIC::tick() {
         if (rasterLine >= 312) {
             rasterLine = 0;
             needsRender = true;
-
+            frameCount++;
             if (framebufferCallback) {
                 framebufferCallback(screen);
             }

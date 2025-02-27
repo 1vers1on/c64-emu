@@ -39,6 +39,16 @@ public:
 private:
     void triggerInterrupt(uint8_t interruptType);
     void clearInterrupt(uint8_t interruptType);
+
+    uint32_t lastFrameCount;
+    uint8_t tenthsSeconds;
+    uint8_t singleSeconds;
+    uint8_t tensSeconds;
+    uint8_t singleMinutes;
+    uint8_t tensMinutes;
+    uint8_t singleHours;
+    uint8_t tensHours;
+    bool PM;
     
     uint16_t timerA;
     uint16_t timerAReload;
