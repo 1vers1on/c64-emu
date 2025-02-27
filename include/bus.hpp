@@ -6,8 +6,10 @@
 #include <cia1.hpp>
 #include <cia2.hpp>
 #include <vic.hpp>
+#include <input.hpp>
 
 class VIC;
+class CIA1;
 
 class Bus {
 public:
@@ -36,6 +38,7 @@ public:
     CIA1 *cia1;
     CIA2 *cia2;
     VIC *vic;
+    Input *input;
 private:
     std::ofstream ramFile;
     uint8_t ram[0xFFFF];

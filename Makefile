@@ -9,10 +9,10 @@ SRC_DIR := src
 SRC_DIRS := $(shell find $(SRC_DIR) -type d)
 CFLAGS := -std=c11 -Werror -g -I$(INCLUDE_DIR) -MMD -MP
 CXXFLAGS := -std=c++17 -Werror -g -I$(INCLUDE_DIR) -MMD -MP
-LDFLAGS := -lm
+LDFLAGS := -lm -lSDL2
 ifeq ($(BUILD_TYPE), debug)
-CFLAGS += -O1 -DDEBUG
-CXXFLAGS += -O1 -DDEBUG
+CFLAGS += -O0 -DDEBUG
+CXXFLAGS += -O0 -DDEBUG
 else
 CFLAGS += -O2
 CXXFLAGS += -O2

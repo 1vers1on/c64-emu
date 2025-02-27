@@ -1506,7 +1506,6 @@ void CPU::executeOnce() {
         pushByte(P & ~BREAK_FLAG);
         P |= INTERRUPT_DISABLE_FLAG;
         PC = bus->readWord(0xFFFE);
-        std::cout << "IRQ" << std::endl;
         irqPending = false;
     }
 

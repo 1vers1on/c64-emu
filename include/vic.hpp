@@ -31,6 +31,11 @@ public:
 
     void setCpu(CPU* cpu);
 
+    bool needsRender = false;
+
+    std::array<uint32_t, 40 * 25 * 8 * 8> screen = {};
+
+
 private:
     void handleRasterInterrupts();
     void handleDMASteal();
@@ -41,7 +46,5 @@ private:
     uint16_t rasterLine = 0; // current raster line
     size_t rasterCycle = 0; // current raster cycle
     size_t cycleCounter = 0; // cycle counter
-
-    std::array<uint32_t, 40 * 25 * 8 * 8> screen = {};
 };
     

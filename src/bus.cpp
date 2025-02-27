@@ -4,9 +4,10 @@
 #include <fstream>
 
 Bus::Bus() {
-    cia1 = new CIA1();
+    cia1 = new CIA1(this);
     cia2 = new CIA2();
     vic = new VIC(this);
+    input = new Input();
 
     for (int i = 0; i < 0xFFFF; i++) {
         ram[i] = 0x00;

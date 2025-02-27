@@ -3,7 +3,8 @@
 #include <iostream>
 #include <bitset>
 
-CIA1::CIA1() {
+CIA1::CIA1(Bus* bus) {
+    this->bus = bus;
     for (int i = 0; i < 0x10; i++) {
         registers[i] = 0x00;
     }
@@ -13,7 +14,7 @@ CIA1::~CIA1() {
 }
 
 void CIA1::write(uint16_t addr, uint8_t data) {
-    std::cout << "CIA1 write to address: " << std::hex << addr << " with data: " << static_cast<int>(data) << std::dec << std::endl;
+    // std::cout << "CIA1 write to address: " << std::hex << addr << " with data: " << static_cast<int>(data) << std::dec << std::endl;
     addr &= 0x0F;
     if (addr == TIMER_A_LOW) {
         timerAReload = (timerAReload & 0xFF00) | data;
@@ -30,9 +31,6 @@ void CIA1::write(uint16_t addr, uint8_t data) {
     if (addr == TIMER_B_HIGH) {
         timerBReload = (timerBReload & 0x00FF) | (data << 8);
         timerB = timerBReload;
-    }
-    if (addr == 0x0E) {
-        std::cout << "TIMER_A_CONTROL_REGISTER: " << std::bitset<8>(data) << std::endl;
     }
 
     if (addr == TIMER_A_CONTROL_REGISTER) {
@@ -51,8 +49,11 @@ void CIA1::write(uint16_t addr, uint8_t data) {
 }
 
 uint8_t CIA1::read(uint16_t addr) {
-    std::cout << "CIA1 read from address: " << std::hex << addr << std::dec << std::endl;
+    // std::cout << "CIA1 read from address: " << std::hex << addr << std::dec << std::endl;
     addr &= 0x0F;
+    if (addr == PORTB) {
+        return bus->input->readKeyMatrix(registers[PORTA]);
+    }
     if (addr == TIMER_A_LOW) {
         return timerA & 0xFF;
     }

@@ -52,14 +52,14 @@ void VIC::tick() {
     rasterCycle++;
     if (rasterCycle >= 63) {
         rasterCycle = 0;
-        rasterLine++;
-
         if (rasterLine < 200) {
             renderScanline();
         }
+        rasterLine++;
 
         if (rasterLine >= 312) {
             rasterLine = 0;
+            needsRender = true;
 
             if (framebufferCallback) {
                 framebufferCallback(screen);

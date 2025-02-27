@@ -70,6 +70,8 @@
         "locale": "cpp",
         "queue": "cpp",
         "stack": "cpp",
-        "__node_handle": "cpp"
+        "__node_handle": "cpp",
+        "fstream": "cpp",
+        "unordered_set": "cpp"
     }
 }
