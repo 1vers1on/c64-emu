@@ -1330,8 +1330,12 @@ CPU::CPU(Bus *bus) {
 CPU::~CPU() {
 }
 
-void CPU::triggerIrq() {
+void CPU::triggerIRQ() {
     irqPending = true;
+}
+
+void CPU::triggerNMI() {
+    nmiPending = true;
 }
 
 uint16_t CPU::getAddress(AddressingMode mode) {
@@ -1512,13 +1516,23 @@ std::string CPU::dump() const {
 void CPU::executeOnce() {
     oldPC = PC;
     lastCycles = cycles;
+    if (nmiPending) {  
+        pushWord(PC);  
+        pushByte(P & ~BREAK_FLAG);  
+        P |= INTERRUPT_DISABLE_FLAG;  
+        PC = bus->readWord(0xFFFA);  
+        nmiPending = false;  
+    }
+
     if (irqPending && !(P & INTERRUPT_DISABLE_FLAG)) {
         pushWord(PC);
         pushByte(P & ~BREAK_FLAG);
         P |= INTERRUPT_DISABLE_FLAG;
         PC = bus->readWord(0xFFFE);
         irqPending = false;
-    }
+    } else if ((P & INTERRUPT_DISABLE_FLAG)) {
+        irqPending = false;
+    }    
 
     uint8_t opcode = fetch();
     currentOpcode = opcode;

@@ -60,7 +60,7 @@ float SID::tick() {
             voice2Output += triangleWave(voice2.phase);
         }
 
-        voice2Output *= voice2.envelope->process(voice2.msSinceStarted);
+        voice2Output *= voice2.envelope->process(voice2.msSinceStarted * 1000000.0f);
     }
 
     float voice3Output = 0;
@@ -78,7 +78,7 @@ float SID::tick() {
             voice3Output += triangleWave(voice3.phase);
         }
 
-        voice3Output *= voice3.envelope->process(voice3.msSinceStarted);
+        voice3Output *= voice3.envelope->process(voice3.msSinceStarted * 1000000.0f);
     }
     float finalOutput = 0;
     float filterOutput = 0;

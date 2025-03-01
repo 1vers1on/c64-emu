@@ -200,7 +200,7 @@ uint32_t VIC::getColor(uint8_t colorCode) {
 void VIC::checkInterrupts() {
     if (registers[0x19] & registers[0x1A]) {
         registers[0x19] |= 0x80;
-        cpu->triggerIrq();
+        cpu->triggerIRQ();
     }
 }
 

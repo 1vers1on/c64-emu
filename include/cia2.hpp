@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <bus.hpp>
+#include <functional>
 
 #define PORTA 0
 #define PORTB 1
@@ -33,12 +34,14 @@ public:
     uint8_t read(uint16_t addr);
 
     void setCpu(CPU *cpu) { this->cpu = cpu; }
+    void setIECBusCallback(std::function<void(bool, bool, bool)> callback) { iecBusCallback = callback; }
+    void IECBusWrite(bool clock, bool data);
 
     void tick();
 
 private:
-    void triggerInterrupt(uint8_t interruptType);
-    void clearInterrupt(uint8_t interruptType);
+    void triggerNMI(uint8_t interruptType);
+    void clearNMI(uint8_t interruptType);
     
     uint32_t lastFrameCount;
     uint8_t tenthsSeconds;
@@ -74,4 +77,7 @@ private:
     // uint8_t interruptControlRegister;
     // uint8_t timerAControlRegister;
     // uint8_t timerBControlRegister;
+    bool clockIn;
+    bool dataIn;
+    std::function<void(bool, bool, bool)> iecBusCallback;
 };

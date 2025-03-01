@@ -20,6 +20,11 @@ inline uint8_t decimalToBCD(uint8_t decimal) {
     return ((decimal / 10) << 4) | (decimal % 10);
 }
 
+void CIA2::IECBusWrite(bool clock, bool data) {
+    clockIn = clock;
+    dataIn = data;
+}
+
 void CIA2::write(uint16_t addr, uint8_t data) {
     std::cout << "CIA2 write to address: " << std::hex << addr << " with data: " << static_cast<int>(data) << std::dec << std::endl;
     addr &= 0x0F;
@@ -37,6 +42,24 @@ void CIA2::write(uint16_t addr, uint8_t data) {
             case 0b00:
                 bus->vic->bankAddress = 0xC000;
                 break;
+        }
+
+        uint8_t oldSerial = (registers[PORTA] & 0b11000111) >> 3;
+        uint8_t serial = (registers[PORTA] & 0b11000111) >> 3;
+        if (iecBusCallback) {
+            if ((oldSerial & 0b00000001) != (data & 0b00000001)) {
+                iecBusCallback(serial & 0b00000001, serial & 0b00000010, serial & 0b00000100);
+            }
+            if ((oldSerial & 0b00000010) != (data & 0b00000010)) {
+                iecBusCallback(serial & 0b00000001, serial & 0b00000010, serial & 0b00000100);
+            }
+            if ((oldSerial & 0b00000100) != (data & 0b00000100)) {
+                iecBusCallback(serial & 0b00000001, serial & 0b00000010, serial & 0b00000100);
+            }
+        }
+
+        if ((oldSerial & 0b11000000) != (data & 0b11000000)) {
+            return;
         }
     }
     if (addr == TIMER_A_LOW) {
@@ -82,6 +105,9 @@ void CIA2::write(uint16_t addr, uint8_t data) {
 uint8_t CIA2::read(uint16_t addr) {
     std::cout << "CIA2 read from address: " << std::hex << addr << std::dec << std::endl;
     addr &= 0x0F;
+    if (addr == PORTA) {
+        return registers[PORTA] & 0b00111111 | (clockIn << 6) | (dataIn << 7);
+    }
     if (addr == TIMER_A_LOW) {
         return timerA & 0xFF;
     }
@@ -149,7 +175,7 @@ void CIA2::tick() {
         timerA -= 1;
         if (timerA == 0) {
             if (registers[INTERRUPT_CONTROL_REGISTER] & 0x01) {
-                triggerInterrupt(0);
+                triggerNMI(0);
             }
 
             if (!(registers[TIMER_A_CONTROL_REGISTER] & 0b1000)) {
@@ -164,7 +190,7 @@ void CIA2::tick() {
         timerB -= 1;
         if (timerB == 0) {
             if (registers[INTERRUPT_CONTROL_REGISTER] & 0x02) {
-                triggerInterrupt(1);
+                triggerNMI(1);
             }
 
             if (!(registers[TIMER_B_CONTROL_REGISTER] & 0b1000)) {
@@ -176,7 +202,8 @@ void CIA2::tick() {
     }
 }
 
-void CIA2::triggerInterrupt(uint8_t interruptType) {
+void CIA2::triggerNMI(uint8_t interruptType) {
     registers[INTERRUPT_CONTROL_REGISTER] |= (1 << (interruptType));
-    cpu->triggerIrq();
+    registers[INTERRUPT_CONTROL_REGISTER] |= 0x80;
+    cpu->triggerNMI();
 }

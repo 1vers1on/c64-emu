@@ -22,7 +22,6 @@ inline uint8_t decimalToBCD(uint8_t decimal) {
 }
 
 void CIA1::write(uint16_t addr, uint8_t data) {
-    // std::cout << "CIA1 write to address: " << std::hex << addr << " with data: " << static_cast<int>(data) << std::dec << std::endl;
     addr &= 0x0F;
     if (addr == TIMER_A_LOW) {
         timerAReload = (timerAReload & 0xFF00) | data;
@@ -148,9 +147,7 @@ void CIA1::tick() {
     if (registers[TIMER_A_CONTROL_REGISTER] & 0x01) {
         timerA -= 1;
         if (timerA == 0) {
-            if (registers[INTERRUPT_CONTROL_REGISTER] & 0x01) {
-                triggerInterrupt(0);
-            }
+            triggerInterrupt(0);
 
             if (!(registers[TIMER_A_CONTROL_REGISTER] & 0b1000)) {
                 timerA = timerAReload;
@@ -178,5 +175,5 @@ void CIA1::tick() {
 
 void CIA1::triggerInterrupt(uint8_t interruptType) {
     registers[INTERRUPT_CONTROL_REGISTER] |= (1 << (interruptType));
-    cpu->triggerIrq();
+    cpu->triggerIRQ();
 }

@@ -1,4 +1,5 @@
 #include <System.hpp>
+#include <chrono>
 
 System::System() {
     // bus = new Bus();
@@ -27,7 +28,7 @@ System::System() {
         cia1->tick();
         cia2->tick();
         vic->tick();
-        sid->tick();
+        // sid->tick();
     });
 }
 
@@ -53,7 +54,26 @@ void System::powerOn() {
 void System::reset() {
     cpu->reset();
 }
+static auto lastTime = std::chrono::high_resolution_clock::now();
+static std::chrono::duration<double> accumulatedTime(0);
+static int tickCount = 0;
+const std::chrono::duration<double> timeThreshold(0.5); // 0.5 seconds
 
 void System::step() {
+    auto now = std::chrono::high_resolution_clock::now();
+    auto delta = now - lastTime;
+    lastTime = now;
+
+    accumulatedTime += delta;
+    tickCount++;
+
+    if (accumulatedTime >= timeThreshold) {
+        double averageClockSpeed = tickCount / accumulatedTime.count();
+        std::cout << "Average Clock speed: " << std::fixed << averageClockSpeed << " Hz" << std::endl;
+        accumulatedTime = std::chrono::duration<double>::zero();
+        tickCount = 0;
+    }
+
     cpu->executeOnce();
 }
+

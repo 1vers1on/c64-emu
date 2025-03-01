@@ -33,6 +33,7 @@ public:
 
     void loadC64rom(const char *filename);
     void loadCharacterRom(const char *filename);
+    void loadCartridge(const char *filename);
 
     uint8_t dataDirectionRegister;
     uint8_t dataRegister = 0b00000111;
@@ -42,11 +43,13 @@ public:
     VIC *vic;
     SID *sid;
     Input *input;
-private:
+// private:
     std::ofstream ramFile;
     uint8_t ram[0xFFFF];
     uint8_t basicRom[0x2000];
     uint8_t kernalRom[0x2000];
     uint8_t charRom[0x1000];
     uint8_t colorRam[0x0400];
+    uint8_t cartridge[0x8000];
+    bool cartridgeLoaded = false;
 };

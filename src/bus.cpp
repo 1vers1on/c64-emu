@@ -2,8 +2,21 @@
 #include <cstdint>
 #include <iostream>
 #include <fstream>
+#include <vector>
+#include <iomanip>
+#include <arpa/inet.h> // For ntohl
+#include "chrom.h"
+#include "kernal.h"
 
 Bus::Bus() {
+    for (int i = 0; i < c64_chrom_bin_len; i++) {
+        charRom[i] = c64_chrom_bin[i];
+    }
+
+    for (int i = 0; i < c64_kernal_bin_len; i++) {
+        basicRom[i] = c64_kernal_bin[i];
+    }
+
     for (int i = 0; i < 0xFFFF; i++) {
         ram[i] = 0x00;
     }
@@ -14,9 +27,95 @@ Bus::Bus() {
 Bus::~Bus() {
 }
 
+struct CRTHeader {
+    char signature[16];
+    uint32_t headerLength;
+    uint16_t version;
+    uint16_t cartridgeType;
+    uint8_t exromLine;
+    uint8_t gameLine;
+    uint8_t reserved[7];
+    char name[32];
+};
+
+struct CHIPPacket {
+    char signature[4];
+    uint32_t length;
+    uint16_t type;
+    uint16_t bank;
+    uint16_t loadAddress;
+    uint16_t dataLength;
+    uint8_t* data;
+};
+
+void Bus::loadCartridge(const char *filename) {
+    std::ifstream file(filename, std::ios::binary | std::ios::in);
+    if (!file.is_open()) {
+        std::cerr << "Failed to open file: " << filename << "\n";
+        return;
+    }
+
+    size_t size = 0;
+    file.seekg(0, std::ios::end);
+    size = file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    CRTHeader header;
+    file.read(reinterpret_cast<char*>(&header), sizeof(CRTHeader));
+
+    header.headerLength = ntohl(header.headerLength);
+
+    std::cout << "Raw header bytes: ";
+    for (size_t i = 0; i < sizeof(CRTHeader); ++i) {
+        std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)((unsigned char*)&header)[i] << " ";
+    }
+    std::cout << std::dec << std::endl;
+
+    if (std::string(header.signature, 16) != "C64 CARTRIDGE   ") {
+        std::cerr << "Invalid CRT file" << std::endl;
+        return;
+    }
+
+    file.seekg(header.headerLength - sizeof(CRTHeader), std::ios::cur);
+
+    std::vector<CHIPPacket> packets;
+    while (file.tellg() < size) {
+        CHIPPacket packet;
+        file.read(reinterpret_cast<char*>(&packet), sizeof(CHIPPacket));
+        packet.length = ntohl(packet.length);
+        packet.bank = ntohs(packet.bank);
+        packet.loadAddress = ntohs(packet.loadAddress);
+        packet.dataLength = ntohs(packet.dataLength);
+        packet.data = new uint8_t[packet.dataLength];
+        file.read(reinterpret_cast<char*>(packet.data), packet.dataLength);
+        packets.push_back(packet);
+    }
+
+    for (CHIPPacket packet : packets) {
+        if (std::string(packet.signature, 4) == "CHIP") {
+            std::cout << "CHIP packet" << std::endl;
+            // print the data
+            for (size_t i = 0; i < packet.dataLength; ++i) {
+                std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)packet.data[i] << " ";
+            }
+            std::cout << std::dec << std::endl;
+            writeBytes(packet.loadAddress, packet.data, packet.dataLength);
+        }
+    }
+
+    cartridgeLoaded = true;
+}
+
 void Bus::write(uint16_t addr, uint8_t data) {
     if (addr == 0x0000) dataDirectionRegister = data;
     if (addr == 0x0001) dataRegister = data;
+
+    if (addr >= 0x8000 && addr <= 0x9FFF) {
+        if (cartridgeLoaded) {
+            std::cerr << "Attempted to write to cartridge ROM" << std::endl;
+            return;
+        }
+    }
 
     if ((dataRegister & 0b011) == 0b00) {
         ram[addr] = data;
@@ -49,7 +148,14 @@ void Bus::write(uint16_t addr, uint8_t data) {
 
 uint8_t Bus::read(uint16_t addr) {
     if (addr == 0x0000) return dataDirectionRegister;
-    if (addr == 0x0001) return dataRegister ;    
+    if (addr == 0x0001) return dataRegister;
+
+    if (addr >= 0x8000 && addr <= 0x9FFF) {
+        if (cartridgeLoaded) {
+            return cartridge[addr - 0x8000];
+        }
+    }
+
     if ((dataRegister  & 0b011) == 0b00) {
         return ram[addr];
     }

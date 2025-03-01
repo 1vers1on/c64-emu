@@ -1,4 +1,5 @@
-#include <SDL2/SDL_timer.h>
+// #include <SDL2/SDL_timer.h>
+#ifndef __EMSCRIPTEN__
 #include <iostream>
 #include <fstream>
 #include <sys/types.h>
@@ -7,7 +8,7 @@
 #include <cstring>
 // #include <cpu.hpp>
 #include <System.hpp>
-#include <SDL2/SDL.h>
+// #include <SDL2/SDL.h>
 #include <algorithm>
 #include <cctype>
 
@@ -108,15 +109,51 @@ void write_bmp(const std::array<uint32_t, 40 * 25 * 8 * 8>& screen, const std::s
     ofs.close();
 }
 
-void render_screen(SDL_Texture* texture, SDL_Renderer* renderer, const std::array<uint32_t, 40 * 25 * 8 * 8>& screen) {
-    SDL_UpdateTexture(texture, nullptr, screen.data(), 320 * sizeof(uint32_t));
-    SDL_RenderClear(renderer);
-    SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-    SDL_RenderPresent(renderer);
-}
+// void render_screen(SDL_Texture* texture, SDL_Renderer* renderer, const std::array<uint32_t, 40 * 25 * 8 * 8>& screen) {
+//     SDL_UpdateTexture(texture, nullptr, screen.data(), 320 * sizeof(uint32_t));
+//     SDL_RenderClear(renderer);
+//     SDL_RenderCopy(renderer, texture, nullptr, nullptr);
+//     SDL_RenderPresent(renderer);
+// }
+
+#define SAMPLE_RATE 44100  // standard audio sample rate
+#define BUFFER_SIZE 512    // number of samples per callback
+
+// // audio callback function
+// void audioCallback(void* userdata, Uint8* stream, int len) {
+//     System* sys = static_cast<System*>(userdata);
+//     int16_t* buffer = (int16_t*)stream;  // sdl expects raw pcm data
+//     int samples = len / sizeof(int16_t);
+
+//     for (int i = 0; i < samples; i++) {
+//         float sample = sys->sid->tick();
+//         buffer[i] = static_cast<int16_t>(sample * 32767.0f);  // convert to 16-bit signed
+
+//         // buffer[i] = sys->sid->tick();
+//         // instead test this with random
+//     }
+// }
+
+// void initAudio(System& system) {
+//     SDL_AudioSpec desiredSpec = {};
+//     desiredSpec.freq = SAMPLE_RATE;
+//     desiredSpec.format = AUDIO_S16SYS;  // 16-bit signed audio
+//     desiredSpec.channels = 1;  // mono output
+//     desiredSpec.callback = audioCallback;
+//     desiredSpec.userdata = &system;
+//     desiredSpec.callback = audioCallback;
+
+//     if (SDL_OpenAudio(&desiredSpec, NULL) < 0) {
+//         std::cerr << "Failed to open audio: " << SDL_GetError() << std::endl;
+//         exit(1);
+//     }
+
+//     SDL_PauseAudio(0);  // start playback
+// }
+
 
 int main() {
-    // if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+    // if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) {
     //     std::cerr << "SDL could not initialize! SDL_Error: " << SDL_GetError() << std::endl;
     //     return 1;
     // }
@@ -130,6 +167,7 @@ int main() {
     //     return 1;
     // }
 
+
     // SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
     // SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
     //                                          SDL_TEXTUREACCESS_STREAMING, 320, 200);
@@ -137,8 +175,9 @@ int main() {
     bool running = true;
     // SDL_Event event;
     System system;
+    // initAudio(system);
     // render_screen(texture, renderer, cpu.bus->vic->screen);
-    system.loadRoms("c64.kernal.bin", "c64.chrom.bin");
+    // system.loadRoms("c64.kernal.bin", "c64.chrom.bin");
 
     // cpu.bus->loadC64rom("c64.kernal.bin");
     // cpu.bus->loadCharacterRom("c64.chrom.bin");
@@ -148,33 +187,42 @@ int main() {
         i++;
     });
 
+    // system.bus->loadCartridge("DEFENDER.CRT");
+
     system.powerOn();
 
     while (running) {
         system.step();
 
-        // if (cpu.bus->vic->needsRender) {
+        // if (system.vic->needsRender) {
         //     while (SDL_PollEvent(&event)) {
         //         if (event.type == SDL_QUIT) {
         //             running = false;
         //         }
         //         if (event.type == SDL_KEYDOWN) {
+        //             // check if its a grave key
+        //             if (event.key.keysym.sym == SDLK_BACKQUOTE) {
+        //                 for (int i = 0; i < 10; i++) {
+        //                     system.sid->write(rand() % 0x1FFF, rand() % 0xFF);
+        //                 }
+        //             }
         //             // the key needs to be all uppercase for the input to work
         //             std::string key = SDL_GetKeyName(event.key.keysym.sym);
         //             std::transform(key.begin(), key.end(), key.begin(), ::toupper);
-        //             cpu.bus->input->setKeyPressed(key, true);
+        //             system.input->setKeyPressed(key, true);
         //         }
         //         if (event.type == SDL_KEYUP) {
         //             std::string key = SDL_GetKeyName(event.key.keysym.sym);
         //             std::transform(key.begin(), key.end(), key.begin(), ::toupper);
-        //             cpu.bus->input->setKeyPressed(key, false);
+        //             system.input->setKeyPressed(key, false);
         //         }
         //     }
-        //     render_screen(texture, renderer, cpu.bus->vic->screen);
-        //     cpu.bus->vic->needsRender = false;
+        //     render_screen(texture, renderer, system.vic->screen);
+        //     system.vic->needsRender = false;
         //     SDL_Delay(20); // if you dont do this your computer will explode
         //     // std::cout << cpu.dump() << std::endl;
         // }
+
     }
     // SDL_DestroyTexture(texture);
     // SDL_DestroyRenderer(renderer);
@@ -182,3 +230,4 @@ int main() {
     // SDL_Quit();
     return 0;
 }
+#endif

@@ -81,7 +81,8 @@ public:
     void pushByte(uint8_t data);
     void pushWord(uint16_t data);
 
-    void triggerIrq();
+    void triggerIRQ();
+    void triggerNMI();
 
     uint8_t popByte();
     uint16_t popWord();
@@ -108,4 +109,5 @@ private:
     std::function<void()> cycleCallback;
 
     bool irqPending = false;
+    bool nmiPending = false;
 };
