@@ -3,3 +3,11 @@ main
 bin/*
 bin
 .cache/*
+emsdk
+ram.bin
+rom_data.h
+convert.py
+6502test.bin
+extractNes.sh
+output
+output.bpm
