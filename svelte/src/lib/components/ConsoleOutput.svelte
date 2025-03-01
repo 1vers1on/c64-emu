@@ -1,10 +1,8 @@
-<script>
-    import { onMount, createEventDispatcher } from "svelte";
+<script lang="ts">
+    import { onMount } from "svelte";
     import { consoleOutput } from "$lib/stores/emulator.js";
 
-    const dispatch = createEventDispatcher();
-
-    export function handleMessage(message) {
+    export function handleMessage(message: { text: string; error?: boolean }) {
         if (message.error) {
             $consoleOutput += `<span style="color: #ff5555;">${message.text}</span>\n`;
         } else {
@@ -16,7 +14,7 @@
         $consoleOutput = "";
     }
 
-    let outputElement;
+    let outputElement: HTMLDivElement;
     $: if (outputElement && $consoleOutput) {
         setTimeout(() => {
             outputElement.scrollTop = outputElement.scrollHeight;
@@ -34,6 +32,7 @@
             class="btn btn-secondary"
             style="padding: 0.2rem 0.5rem;"
             on:click={clearOutput}
+            aria-label="Clear console output"
         >
             <i class="fas fa-trash-alt"></i>
         </button>
@@ -41,7 +40,7 @@
     <div
         bind:this={outputElement}
         id="output"
-        contenteditable="true"
+        contenteditable="false"
         bind:innerHTML={$consoleOutput}
     ></div>
 </div>

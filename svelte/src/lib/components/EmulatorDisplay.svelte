@@ -1,17 +1,16 @@
-<script>
+<script lang="ts">
     import { onMount, onDestroy } from "svelte";
-    import { createEventDispatcher } from "svelte";
-    const dispatch = createEventDispatcher();
+    import { addToConsole, clearConsole } from "$lib/stores/emulator";
 
-    let canvas;
-    let ctx;
-    let worker;
+    let canvas: HTMLCanvasElement;
+    let ctx: CanvasRenderingContext2D;
+    let worker: Worker;
     let outputStore;
 
     function start() {
         console.log("Starting emulator...");
         worker.postMessage({ type: "start" });
-        dispatch("message", { text: "Starting emulator..." });
+        addToConsole("Starting emulator...");
     }
 
     function renderFrame() {
@@ -20,14 +19,12 @@
 
     function pause() {
         console.log("Emulation paused");
-        dispatch("message", { text: "Emulation paused" });
+        addToConsole("Emulation paused");
     }
 
     function reset() {
         console.log("Emulator reset");
-        dispatch("message", {
-            text: "",
-        });
+        clearConsole();
     }
 
     function screenshot() {
@@ -39,20 +36,25 @@
         link.click();
 
         console.log("Screenshot saved");
-        dispatch("message", { text: "Screenshot saved" });
+        addToConsole("Screenshot saved");
     }
 
     onMount(() => {
-        ctx = canvas.getContext("2d");
+        const context = canvas.getContext("2d");
+        if (context) {
+            ctx = context;
+        } else {
+            console.error("Failed to get 2D context");
+        }
 
         worker = new Worker("/worker.js", { type: "module" });
 
         worker.onmessage = (e) => {
             if (e.data.type === "print") {
                 console.log(e.data.text);
-                dispatch("message", { text: e.data.text });
+                addToConsole(e.data.text);
             } else if (e.data.type === "printErr") {
-                dispatch("message", { text: e.data.text, error: true });
+                addToConsole(e.data.text, true);
             } else if (e.data.type === "frame") {
                 var fb = new Uint32Array(e.data.framebuffer);
                 var imgData = ctx.createImageData(320, 200);

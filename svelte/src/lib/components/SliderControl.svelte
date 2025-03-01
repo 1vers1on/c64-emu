@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
     export let label = "";
     export let min = 0;
     export let max = 100;
@@ -32,6 +32,7 @@
     }
 
     .slider {
+        appearance: none;
         -webkit-appearance: none;
         width: 100%;
         height: 6px;

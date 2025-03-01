@@ -1,14 +1,7 @@
-<script>
+<script lang="ts">
     import ToggleSwitch from "./ToggleSwitch.svelte";
     import SliderControl from "./SliderControl.svelte";
-
-    // Initial settings state
-    let settings = {
-        scanlines: false,
-        soundEnabled: true,
-        volume: 75,
-        speed: 100,
-    };
+    import { emulatorSettings } from "$lib/stores/emulator";
 </script>
 
 <div class="glass-panel settings-container">
@@ -20,17 +13,17 @@
     </div>
 
     <div class="setting-group">
-        <ToggleSwitch label="CRT Scanlines" bind:active={settings.scanlines} />
+        <ToggleSwitch label="CRT Scanlines" bind:active={(emulatorSettings as any).scanlines} />
 
         <ToggleSwitch
             label="Sound Enabled"
-            bind:active={settings.soundEnabled}
+            bind:active={(emulatorSettings as any).soundEnabled}
         />
     </div>
 
     <SliderControl
         label="Volume"
-        bind:value={settings.volume}
+        bind:value={(emulatorSettings as any).volume}
         min={0}
         max={100}
         unit="%"
@@ -38,7 +31,7 @@
 
     <SliderControl
         label="Emulation Speed"
-        bind:value={settings.speed}
+        bind:value={(emulatorSettings as any).speed}
         min={50}
         max={200}
         unit="%"

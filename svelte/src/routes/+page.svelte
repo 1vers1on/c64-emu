@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
     import Header from "$lib/components/Header.svelte";
     import EmulatorDisplay from "$lib/components/EmulatorDisplay.svelte";
     import AdditionalControls from "$lib/components/AdditionalControls.svelte";

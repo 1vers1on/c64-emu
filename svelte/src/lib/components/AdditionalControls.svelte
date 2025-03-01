@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
     function virtualKeyboard() {
         console.log("Virtual keyboard activated");
     }
