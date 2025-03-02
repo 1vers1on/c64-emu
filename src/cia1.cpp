@@ -1,7 +1,5 @@
 #include <cia1.hpp>
 #include <cpu.hpp>
-#include <iostream>
-#include <bitset>
 
 CIA1::CIA1(Bus* bus) {
     this->bus = bus;
@@ -14,7 +12,7 @@ CIA1::~CIA1() {
 }
 
 inline uint8_t BCDToDecimal(uint8_t bcd) {
-    return ((bcd & 0xF0) >> 4) * 10 + (bcd & 0x0F);
+    return ((bcd >> 4) * 10) + (bcd & 0x0F);
 }
 
 inline uint8_t decimalToBCD(uint8_t decimal) {
@@ -23,89 +21,79 @@ inline uint8_t decimalToBCD(uint8_t decimal) {
 
 void CIA1::write(uint16_t addr, uint8_t data) {
     addr &= 0x0F;
-    if (addr == TIMER_A_LOW) {
-        timerAReload = (timerAReload & 0xFF00) | data;
-        timerA = timerAReload;
-    }
-    if (addr == TIMER_A_HIGH) {
-        timerAReload = (timerAReload & 0x00FF) | (data << 8);
-        timerA = timerAReload;
-    }
-    if (addr == TIMER_B_LOW) {
-        timerBReload = (timerBReload & 0xFF00) | data;
-        timerB = timerBReload;
-    }
-    if (addr == TIMER_B_HIGH) {
-        timerBReload = (timerBReload & 0x00FF) | (data << 8);
-        timerB = timerBReload;
-    }
-
-    if (addr == TIMER_A_CONTROL_REGISTER) {
-        if (data & 0b00010000) {
+    switch (addr) {
+        case TIMER_A_LOW:
+            timerAReload = (timerAReload & 0xFF00) | data;
             timerA = timerAReload;
-        }
-    }
-
-    if (addr == TIMER_B_CONTROL_REGISTER) {
-        if (data & 0b00010000) {
+            break;
+        case TIMER_A_HIGH:
+            timerAReload = (timerAReload & 0x00FF) | (data << 8);
+            timerA = timerAReload;
+            break;
+        case TIMER_B_LOW:
+            timerBReload = (timerBReload & 0xFF00) | data;
             timerB = timerBReload;
-        }
+            break;
+        case TIMER_B_HIGH:
+            timerBReload = (timerBReload & 0x00FF) | (data << 8);
+            timerB = timerBReload;
+            break;
+        case TIMER_A_CONTROL_REGISTER:
+            if (data & 0x10) {  // 0b00010000
+                timerA = timerAReload;
+            }
+            break;
+        case TIMER_B_CONTROL_REGISTER:
+            if (data & 0x10) {
+                timerB = timerBReload;
+            }
+            break;
+        case TIME_OF_DAY_TENTHS:
+            tenthsSeconds = BCDToDecimal(data);
+            break;
+        case TIME_OF_DAY_SECONDS:
+            singleSeconds = BCDToDecimal(data & 0x0F);
+            tensSeconds = BCDToDecimal(data >> 4);
+            break;
+        case TIME_OF_DAY_MINUTES:
+            singleMinutes = BCDToDecimal(data & 0x0F);
+            tensMinutes = BCDToDecimal(data >> 4);
+            break;
+        case TIME_OF_DAY_HOURS:
+            singleHours = BCDToDecimal(data & 0x0F);
+            tensHours = BCDToDecimal((data & 0x30) >> 4);
+            PM = data & 0x20;
+            break;
+        default:
+            break;
     }
-
-    if (addr == TIME_OF_DAY_TENTHS) {
-        tenthsSeconds = BCDToDecimal(data);
-    }
-
-    if (addr == TIME_OF_DAY_SECONDS) {
-        singleSeconds = BCDToDecimal(data & 0x0F);
-        tensSeconds = BCDToDecimal((data & 0xF0) >> 4);
-    }
-
-    if (addr == TIME_OF_DAY_MINUTES) {
-        singleMinutes = BCDToDecimal(data & 0x0F);
-        tensMinutes = BCDToDecimal((data & 0xF0) >> 4);
-    }
-
-    if (addr == TIME_OF_DAY_HOURS) {
-        singleHours = BCDToDecimal(data & 0x0F);
-        tensHours = BCDToDecimal((data & 0x30) >> 4);
-        PM = data & 0x20;
-    }
-
     registers[addr] = data;
 }
 
 uint8_t CIA1::read(uint16_t addr) {
-    // std::cout << "CIA1 read from address: " << std::hex << addr << std::dec << std::endl;
     addr &= 0x0F;
-    if (addr == PORTB) {
-        return bus->input->readKeyMatrix(registers[PORTA]);
+    switch (addr) {
+        case PORTB:
+            return bus->input->readKeyMatrix(registers[PORTA]);
+        case TIMER_A_LOW:
+            return timerA & 0xFF;
+        case TIMER_A_HIGH:
+            return timerA >> 8;
+        case TIMER_B_LOW:
+            return timerB & 0xFF;
+        case TIMER_B_HIGH:
+            return timerB >> 8;
+        case TIME_OF_DAY_TENTHS:
+            return decimalToBCD(tenthsSeconds);
+        case TIME_OF_DAY_SECONDS:
+            return decimalToBCD(singleSeconds) | (decimalToBCD(tensSeconds) << 4);
+        case TIME_OF_DAY_MINUTES:
+            return decimalToBCD(singleMinutes) | (decimalToBCD(tensMinutes) << 4);
+        case TIME_OF_DAY_HOURS:
+            return decimalToBCD(singleHours) | (decimalToBCD(tensHours) << 4) | (PM << 5);
+        default:
+            return registers[addr];
     }
-    if (addr == TIMER_A_LOW) {
-        return timerA & 0xFF;
-    }
-    if (addr == TIMER_A_HIGH) {
-        return timerA >> 8;
-    }
-    if (addr == TIMER_B_LOW) {
-        return timerB & 0xFF;
-    }
-    if (addr == TIMER_B_HIGH) {
-        return timerB >> 8;
-    }
-    if (addr == TIME_OF_DAY_TENTHS) {
-        return decimalToBCD(tenthsSeconds);
-    }
-    if (addr == TIME_OF_DAY_SECONDS) {
-        return decimalToBCD(singleSeconds) | (decimalToBCD(tensSeconds) << 4);
-    }
-    if (addr == TIME_OF_DAY_MINUTES) {
-        return decimalToBCD(singleMinutes) | (decimalToBCD(tensMinutes) << 4);
-    }
-    if (addr == TIME_OF_DAY_HOURS) {
-        return decimalToBCD(singleHours) | (decimalToBCD(tensHours) << 4) | (PM << 5);
-    }
-    return registers[addr];
 }
 
 void CIA1::tick() {
@@ -145,8 +133,7 @@ void CIA1::tick() {
     }
 
     if (registers[TIMER_A_CONTROL_REGISTER] & 0x01) {
-        timerA -= 1;
-        if (timerA == 0) {
+        if (--timerA == 0) {
             triggerInterrupt(0);
 
             if (!(registers[TIMER_A_CONTROL_REGISTER] & 0b1000)) {
@@ -158,8 +145,7 @@ void CIA1::tick() {
     }
 
     if (registers[TIMER_B_CONTROL_REGISTER] & 0x01) {
-        timerB -= 1;
-        if (timerB == 0) {
+        if (--timerB == 0) {
             if (registers[INTERRUPT_CONTROL_REGISTER] & 0x02) {
                 triggerInterrupt(1);
             }

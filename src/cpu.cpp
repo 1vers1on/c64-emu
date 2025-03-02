@@ -4,13 +4,9 @@
 #include <array>
 #include <stdexcept>
 #include <iostream>
-#include <iomanip>
-#include <sstream>
-#include <thread>
 
 static void unkownInstruction(CPU *cpu, AddressingMode mode) {
     std::cout << "opcode: " << std::hex << static_cast<int>(cpu->getCurrentOpcode()) << std::dec << "\n";
-    std::cout << cpu->dump() << "\n";
     throw std::runtime_error("Unknown instruction");
 }
 
@@ -1339,8 +1335,6 @@ void CPU::triggerNMI() {
 }
 
 uint16_t CPU::getAddress(AddressingMode mode) {
-    std::stringstream ss;
-    ss << std::uppercase;
     switch (mode) {
         case AddressingMode::ACCUMULATOR:
             return 0;
@@ -1349,38 +1343,23 @@ uint16_t CPU::getAddress(AddressingMode mode) {
             return 0;
 
         case AddressingMode::IMMEDIATE: {
-            fetchLogs.push_back(bus->read(PC));
-            ss << "#$" << std::hex << std::setw(2) << std::setfill('0') << (int)fetchLogs[1];
-            currentInstruction += " " + ss.str();
             return PC++;
         }
 
         case AddressingMode::ZERO_PAGE: {
-            const uint8_t address = fetch();
-            ss << "$" << std::hex << std::setw(2) << std::setfill('0') << (int)address;
-            currentInstruction += " " + ss.str();
-            return address;
+            return fetch();
         }
         
         case AddressingMode::ZERO_PAGE_X: {
-            const uint8_t address = fetch();
-            ss << "$" << std::hex << std::setw(2) << std::setfill('0') << (int)address << ",X";
-            currentInstruction += " " + ss.str();
-            return (address + X) & 0xFF;
+            return (fetch() + X) & 0xFF;
         }
         
         case AddressingMode::ZERO_PAGE_Y: {
-            const uint8_t address = fetch();
-            ss << "$" << std::hex << std::setw(2) << std::setfill('0') << (int)address << ",Y";
-            currentInstruction += " " + ss.str();
-            return (address + Y) & 0xFF;
+            return (fetch() + Y) & 0xFF;
         }
         
         case AddressingMode::ABSOLUTE: {
-            const uint16_t address = fetchWord();
-            ss << "$" << std::hex << std::setw(4) << std::setfill('0') << address;
-            currentInstruction += " " + ss.str();
-            return address;
+            return fetchWord();
         }
 
         case AddressingMode::ABSOLUTE_X: {
@@ -1388,54 +1367,41 @@ uint16_t CPU::getAddress(AddressingMode mode) {
             if ((address & 0xFF00) != ((address + X) & 0xFF00)) {
                 stepCycles(1);
             }
-            ss << "$" << std::hex << std::setw(4) << std::setfill('0') << (int)fetchLogs[1] + (fetchLogs[2] << 8) << ",X";
-            currentInstruction += " " + ss.str();
             return address + X;
         }
 
         case AddressingMode::ABSOLUTE_Y: {
-            // cycles += 2;
             const uint16_t address = fetchWord();
             if ((address & 0xFF00) != ((address + Y) & 0xFF00)) {
-                // cycles += 1;
                 stepCycles(1);
             }
-            ss << "$" << std::hex << std::setw(4) << std::setfill('0') << (int)fetchLogs[1] + (fetchLogs[2] << 8) << ",Y";
-            currentInstruction += " " + ss.str();
             return address + Y;
         }
 
         case AddressingMode::INDIRECT: {
             const uint16_t address = fetchWord();
-            ss << "($" << std::hex << std::setw(4) << std::setfill('0') << (int)fetchLogs[1] + (fetchLogs[2] << 8) << ")";
-            currentInstruction += " " + ss.str();
             stepCycles(2);
             return bus->read(address) | (bus->read((address & 0xFF00) | ((address + 1) & 0xFF)) << 8);
         }
 
         case AddressingMode::INDIRECT_X: {
             uint8_t address = fetch();
-            ss << "($" << std::hex << std::setw(2) << std::setfill('0') << (int)fetchLogs[1] << ",X)";
-            currentInstruction += " " + ss.str();
             stepCycles(2);
             return bus->read((address + X) & 0xFF) + (uint16_t(bus->read((address + X + 1) & 0xFF)) << 8);
         }
         
         case AddressingMode::INDIRECT_Y: {
             uint8_t base = fetch();
-            ss << "($" << std::hex << std::setw(2) << std::setfill('0') << (int)fetchLogs[1] << "),Y";
             uint8_t lo = bus->read(base);
             uint8_t hi = bus->read((base + 1) & 0xFF);
 
             uint16_t deref_base = ((uint16_t)lo) | ((uint16_t)hi << 8);
             uint16_t deref = deref_base + Y;
             if ((deref_base & 0xFF00) != (deref & 0xFF00)) {
-                // cycles += 1;
                 stepCycles(1);
             }
 
             stepCycles(2);
-            currentInstruction += " " + ss.str();
             return deref;
         }
 
@@ -1443,14 +1409,11 @@ uint16_t CPU::getAddress(AddressingMode mode) {
             throw std::runtime_error("Unsupported addressing mode");
     }
 
-
-
     return 0;
 }
 
 void CPU::powerOn() {
     PC = bus->readWord(0xFFFC);
-    // PC = 0xC000;
     SP = 0xFD;
     P = 0x24;
     A = 0x00;
@@ -1468,9 +1431,7 @@ void CPU::reset() {
 
 uint8_t CPU::fetch() {
     const uint8_t data = bus->read(PC++);
-    // cycles += 1;
     stepCycles(1);
-    fetchLogs.push_back(data);
     return data;
 }
 
@@ -1479,51 +1440,15 @@ uint16_t CPU::fetchWord() {
     return data;
 }
 
-std::string CPU::dump() const {
-    std::ostringstream oss;
-    int length = 0;
-    
-    oss << std::hex << std::uppercase << std::setfill('0') << std::setw(4) << static_cast<int>(oldPC) << "  ";
-    length += 6;
-    
-    for (auto data : fetchLogs) {
-        oss << std::setw(2) << static_cast<int>(data) << " ";
-        length += 3;
-    }
-
-    for (int i = 0; i < 16 - length; i++) {
-        oss << " ";
-    }
-
-    length = 16;
-    
-    oss << currentInstruction << " ";
-    length += currentInstruction.length() + 1;
-    for (int i = 0; i < 48 - length; i++) {
-        oss << " ";
-    }
-
-    oss << "A:" << std::setw(2) << static_cast<int>(A) << " ";
-    oss << "X:" << std::setw(2) << static_cast<int>(X) << " ";
-    oss << "Y:" << std::setw(2) << static_cast<int>(Y) << " ";
-    oss << "P:" << std::setw(2) << static_cast<int>(P) << " ";
-    oss << "SP:" << std::setw(2) << static_cast<int>(SP) << " ";
-    oss << "CYC:" << std::dec << cycles - lastCycles;
-
-    return oss.str();
-}
-
 void CPU::executeOnce() {
-    oldPC = PC;
     lastCycles = cycles;
     if (nmiPending) {  
         pushWord(PC);  
         pushByte(P & ~BREAK_FLAG);  
         P |= INTERRUPT_DISABLE_FLAG;  
         PC = bus->readWord(0xFFFA);  
-        nmiPending = false;  
-    }
-
+        nmiPending = false;
+    } 
     if (irqPending && !(P & INTERRUPT_DISABLE_FLAG)) {
         pushWord(PC);
         pushByte(P & ~BREAK_FLAG);
@@ -1539,8 +1464,6 @@ void CPU::executeOnce() {
     auto [instruction, addressingMode, name] = instructions[opcode];
     currentInstruction = name;
     instruction(this, addressingMode);
-
-    fetchLogs.clear();
 }
 
 void CPU::pushByte(uint8_t data) {
@@ -1564,6 +1487,7 @@ void CPU::stepCycles(size_t cycles) {
 
 void CPU::stallCycles(size_t cycles) {
     // TODO: add this
+    this->cycles += cycles;
 }
 
 uint8_t CPU::popByte() {

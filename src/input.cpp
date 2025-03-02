@@ -14,25 +14,25 @@ Input::~Input() {
 }
 
 void Input::setKeyPressed(std::string key, bool pressed) {
-    // check if its in keys
-    if (key == "BACKSPACE") {
-        key = "DELETE";
-    }
-    if (key == "TAB") {
-        key = "STOP";
-    }
-    if (key == "LEFT SHIFT") {
-        key = "LSHIFT";
-    }
-    if (key == "RIGHT SHIFT") {
-        key = "RSHIFT";
-    }
-    if (key == "\\") {
-        key = "+";
-    }   
-    if (key == "'") {
-        key = ":";
-    }   
+    // // check if its in keys
+    // if (key == "BACKSPACE") {
+    //     key = "DELETE";
+    // }
+    // if (key == "TAB") {
+    //     key = "STOP";
+    // }
+    // if (key == "LEFT SHIFT") {
+    //     key = "LSHIFT";
+    // }
+    // if (key == "RIGHT SHIFT") {
+    //     key = "RSHIFT";
+    // }
+    // if (key == "\\") {
+    //     key = "+";
+    // }   
+    // if (key == "'") {
+    //     key = ":";
+    // }   
     auto it = std::find(keys.begin(), keys.end(), key);
     if (it == keys.end()) {
         std::cerr << "Key not found: " << key << std::endl;

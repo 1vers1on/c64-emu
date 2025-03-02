@@ -1,11 +1,14 @@
 <script lang="ts">
     import { onMount, onDestroy } from "svelte";
-    import { addToConsole, clearConsole } from "$lib/stores/emulator";
+    import { addToConsole, clearConsole, emulatorSettings } from "$lib/stores/emulator";
 
     let canvas: HTMLCanvasElement;
     let ctx: CanvasRenderingContext2D;
     let worker: Worker;
     let outputStore;
+    let textInput: HTMLInputElement;
+
+    let clockSpeed = $state(0);
 
     function start() {
         console.log("Starting emulator...");
@@ -39,15 +42,504 @@
         addToConsole("Screenshot saved");
     }
 
-    onMount(() => {
-        const context = canvas.getContext("2d");
-        if (context) {
-            ctx = context;
-        } else {
-            console.error("Failed to get 2D context");
+    function reverseKeyInput(key: string, shiftPressed: boolean): string {
+        if (key === "Shift") {
+            return "LSHIFT";
         }
 
+        if (key === "Control") {
+            return "LCTRL";
+        }
+        if (key === "Backspace") {
+            return "DELETE";
+        }
+        if (key === '"') {
+            return "2";
+        }
+
+        if (key === "Enter") {
+            return "RETURN";
+        }
+
+        if (key === " ") {
+            return "SPACE";
+        }
+
+        if (shiftPressed) {
+            switch (key) {
+                case "!":
+                    return "1";
+                // case "@":
+                //     return "";
+                case "#":
+                    return "3";
+                case "$":
+                    return "4";
+                case "%":
+                    return "5";
+                // case "^":
+                //     return "6";
+                case "&":
+                    return "6";
+                case "*":
+                    return "*";
+                case "(":
+                    return "8";
+                case ")":
+                    return "9";
+                case "_":
+                    return "-";
+                case "+":
+                    return "+";
+                case "{":
+                    return "[";
+                case "}":
+                    return "]";
+                case "|":
+                    return "\\";
+                case ":":
+                    return "{";
+                case '"':
+                    return "'";
+                case "<":
+                    return ",";
+                case ">":
+                    return ".";
+                case "?":
+                    return "/";
+                case "~":
+                    return "`";
+            }
+        }
+        return key.toUpperCase();
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+        worker.postMessage({
+            type: "keyDown",
+            key: reverseKeyInput(event.key, event.shiftKey),
+        });
+    }
+
+    function onKeyUp(event: KeyboardEvent) {
+        worker.postMessage({
+            type: "keyUp",
+            key: reverseKeyInput(event.key, event.shiftKey),
+        });
+    }
+
+    function asciiToPetscii(input: string): Uint8Array {
+        const petsciiMap: Record<number, number> = {
+            // lowercase to uppercase (petscii lacks lowercase in standard mode)
+            ...Object.fromEntries(
+                [...Array(26)].map((_, i) => [97 + i, 65 + i]),
+            ), // 'a'->'A', 'b'->'B', etc.
+
+            // reverse mappings for some common ascii characters
+            91: 160, // '[' -> '£'
+            92: 161, // '\' -> '⎻'
+            93: 162, // ']' -> '⎼'
+            94: 94, // '^' stays the same
+            95: 95, // '_' stays the same
+            123: 185, // '{' -> 'π'
+            124: 186, // '|' -> '┤'
+            125: 187, // '}' -> '┐'
+            126: 188, // '~' -> '└'
+        };
+
+        return new Uint8Array(
+            input.split("").map((char) => {
+                const code = char.charCodeAt(0);
+                if (code in petsciiMap) return petsciiMap[code];
+                if (code >= 32 && code <= 95) return code; // basic ascii range
+                if (code >= 192 && code <= 223) return code - 128; // extended petscii range
+                return 32; // unknown characters become space
+            }),
+        );
+    }
+
+    onMount(() => {
+        textInput.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                worker.postMessage({
+                    type: "inputText",
+                    bytes: asciiToPetscii(textInput.value),
+                });
+                textInput.value = "";
+            }
+        });
+
+        canvas.addEventListener("keydown", onKeyDown);
+        canvas.addEventListener("keyup", onKeyUp);
+
+        window.addEventListener("keydown", (event) => {
+            if (event.key === " " || event.key === "Tab") {
+                event.preventDefault();
+            }
+        });
+
         worker = new Worker("/worker.js", { type: "module" });
+
+        const gl =
+            (canvas.getContext("webgl2") as WebGL2RenderingContext) || null;
+
+        if (!(gl instanceof WebGL2RenderingContext)) {
+            console.error("WebGL2 not supported");
+            return;
+        }
+
+        function resizeCanvasToDisplaySize(canvas: HTMLCanvasElement) {
+            const displayWidth = canvas.clientWidth;
+            const displayHeight = canvas.clientHeight;
+
+            if (
+                canvas.width !== displayWidth ||
+                canvas.height !== displayHeight
+            ) {
+                canvas.width = displayWidth;
+                canvas.height = displayHeight;
+            }
+        }
+
+        let texture: WebGLTexture;
+        let program: WebGLProgram;
+        let positionBuffer: WebGLBuffer;
+
+        function initWebGL() {
+            texture = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.texParameteri(
+                gl.TEXTURE_2D,
+                gl.TEXTURE_WRAP_S,
+                gl.CLAMP_TO_EDGE,
+            );
+            gl.texParameteri(
+                gl.TEXTURE_2D,
+                gl.TEXTURE_WRAP_T,
+                gl.CLAMP_TO_EDGE,
+            );
+
+            // allocate immutable storage for the texture
+            gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, 320, 200);
+
+            const vertexShaderSource = `#version 300 es
+                in vec2 a_position;
+                in vec2 a_texCoord;
+                out vec2 v_texCoord;
+                void main() {
+                    gl_Position = vec4(a_position, 0, 1);
+                    v_texCoord = a_texCoord;
+                }
+            `;
+
+            const fragmentShaderSource = `#version 300 es
+                precision mediump float;
+
+                uniform sampler2D u_image;
+                uniform vec2 u_resolution;
+                uniform bool u_crtEnabled;
+                in vec2 v_texCoord;
+                out vec4 outColor;
+
+                #define BLOOM 1
+                #define CURVATURE 1
+                #define BLUR 1
+                #define BLACKLEVEL 1
+                #define SCANLINES 1
+                // 1: shadow mask
+                // 2: aperature grille
+                #define SHADOW_MASK 1
+                #define SHADOW_MASK_DARK 0.8
+                #define VIGNETTE 1
+
+                #define BLOOM_OFFSET            0.00015
+                #define BLOOM_STRENGTH          0.8
+
+                #define BLUR_MULTIPLIER         1.05
+                #define BLUR_STRENGTH           0.2
+                #define BLUR_OFFSET             0.003
+
+                #define BLACKLEVEL_FLOOR        TINT_COLOR / 40.0
+
+                #define CURVE_INTENSITY         1.0
+
+                #define SHADOW_MASK_STRENGTH    0.15
+
+                #define VIGNETTE_STRENGTH       1.2
+
+                #define TINT_COLOR              TINT_AMBER
+
+                #define TINT_AMBER              vec3(1.0, 0.7, 0.0) // P3 phosphor
+                #define TINT_LIGHT_AMBER        vec3(1.0, 0.8, 0.0)
+                #define TINT_GREEN_1            vec3(0.2, 1.0, 0.0)
+                #define TINT_APPLE_II           vec3(0.2, 1.0, 0.2) // P1 phosphor
+                #define TINT_GREEN_2            vec3(0.0, 1.0, 0.2)
+                #define TINT_APPLE_IIc          vec3(0.4, 1.0, 0.4) // P24 phpsphor
+                #define TINT_GREEN_3            vec3(0.0, 1.0, 0.4)
+                #define TINT_WARM               vec3(1.0, 0.9, 0.8)
+                #define TINT_COOL               vec3(0.8, 0.9, 1.0)
+
+                #define saturate(x) clamp(x, 0.0, 1.0)
+                    float ToSrgb1(float c){return(c<0.0031308?c*12.92:1.055*pow(c,0.41666)-0.055);}
+                    vec4 ToSrgb(vec4 c){return vec4(ToSrgb1(c.r),ToSrgb1(c.g),ToSrgb1(c.b),ToSrgb1(c.a));}
+                vec4 getTexture(vec2 uv) {
+                    vec2 textureDimensions = vec2(320.0, 200.0);
+                    float scaleFactor = 0.5;
+                    vec2 scaledDimensions = textureDimensions / scaleFactor;
+                    vec2 offset = (u_resolution - scaledDimensions) * 0.5;
+                    
+                    vec2 fragCoord = uv * u_resolution;
+                    vec2 centeredCoord = fragCoord - offset;
+                    vec2 scaledCoord = centeredCoord * scaleFactor;
+                    
+                    if (scaledCoord.x >= 0.0 && scaledCoord.x < textureDimensions.x && 
+                        scaledCoord.y >= 0.0 && scaledCoord.y < textureDimensions.y) {
+                        return ToSrgb(texelFetch(u_image, ivec2(scaledCoord), 0));
+                    } else {
+                        return vec4(0.396078431372549, 0.4392156862745098, 0.7450980392156863, 1.0);
+                    }
+                }
+
+                float blurWeights[9] = float[](0.0, 0.092, 0.081, 0.071, 0.061, 0.051, 0.041, 0.031, 0.021);
+
+                #ifdef BLOOM
+                vec3 bloom(vec3 color, vec2 uv) {
+                    vec3 bloom = color - getTexture(uv + vec2(-BLOOM_OFFSET, 0)).rgb;
+                    vec3 bloomMask = bloom * BLOOM_STRENGTH;
+                    
+                    return saturate(color + bloomMask);
+                }
+                #endif
+
+                #ifdef CURVATURE
+                vec2 transformCurve(vec2 uv) {
+                    uv -= 0.5;
+                    float r = (uv.x * uv.x + uv.y * uv.y) * CURVE_INTENSITY;
+                    uv *= 4.2 + r;
+                    uv *= 0.25;
+                    uv += 0.5;
+                    
+                    return uv;
+                }
+                #endif
+
+                #ifdef BLUR
+                vec3 blurH(vec3 color, vec2 uv) {
+                    vec3 screen = getTexture(uv).rgb * 0.102;
+                    for (int i = 1; i < 9; i++) {
+                        screen += getTexture(uv + vec2(float(i) * BLUR_OFFSET, 0)).rgb * blurWeights[i];
+                    }
+                    
+                    for (int i = 1; i < 9; i++) {
+                        screen += getTexture(uv + vec2(float(-i) * BLUR_OFFSET, 0)).rgb * blurWeights[i];
+                    }
+
+                    return screen * BLUR_MULTIPLIER;
+                }
+
+                vec3 blurV(vec3 color, vec2 uv) {
+                    vec3 screen = getTexture(uv).rgb * 0.102;
+                    for (int i = 1; i < 9; i++) {
+                        screen += getTexture(uv + vec2(0, float(i) * BLUR_OFFSET)).rgb * blurWeights[i];
+                    }
+                    
+                    for (int i = 1; i < 9; i++) {
+                        screen += getTexture(uv + vec2(0, float(-i) * BLUR_OFFSET)).rgb * blurWeights[i];
+                    }
+
+                    return screen * BLUR_MULTIPLIER;
+                }
+
+                vec3 blur(vec3 color, vec2 uv) {
+                    vec3 blur = (blurH(color, uv) + blurV(color, uv)) / 2.0 - color;
+                    vec3 blurMask = blur * BLUR_STRENGTH;
+                    return saturate(color + blurMask);
+                }
+                #endif
+
+                #ifdef BLACKLEVEL
+                vec3 blacklevel(vec3 color) {
+                    color -= BLACKLEVEL_FLOOR;
+                    color = saturate(color);
+                    color += BLACKLEVEL_FLOOR;
+                    return color;
+                }
+                #endif
+
+                #ifdef SHADOW_MASK
+                vec3 shadowMask(vec2 uv, vec2 outputSize) {
+                    uv *= outputSize.xy;
+                    #if SHADOW_MASK == 1
+                    uv.x += uv.y * 3.0;
+                    vec3 mask = vec3(SHADOW_MASK_DARK);
+                    float x = fract(uv.x * (1.0 / 6.0));
+                    
+                    if(x < (1.0 / 3.0)) mask.r = 1.0;
+                    else if(x < (2.0 / 3.0)) mask.g = 1.0;
+                    else mask.b = 1.0;
+                    
+                    return mask;
+                    #elif SHADOW_MASK == 2
+                    vec3 mask = vec3(1.0);
+                    float x = fract(uv.x * (1.0 / 3.0));
+                    
+                    if(x < (1.0 / 3.0)) mask.r = SHADOW_MASK_DARK;
+                    else if(x < (2.0 / 3.0)) mask.g = SHADOW_MASK_DARK;
+                    else mask.b = SHADOW_MASK_DARK;
+                    
+                    return mask;
+                    #endif
+                }
+                #endif
+
+                vec3 crt(vec2 uv, vec2 outputSize) {
+                    #ifdef CURVATURE
+                    uv = transformCurve(uv);
+
+                    if (uv.x < -0.0 || uv.y < -0.0 || uv.x > 1.0 || uv.y > 1.0) {
+                        return BLACKLEVEL_FLOOR;
+                    }
+                    #endif
+                    
+                    vec3 col = getTexture(uv).rgb;
+                    
+                    #ifdef BLOOM
+                    col = bloom(col, uv);
+                    #endif
+                    
+                    #ifdef BLUR
+                    col = blur(col, uv);
+                    #endif
+                    
+                    #ifdef BLACKLEVEL
+                    col = blacklevel(col);
+                    #endif
+                    
+                    #ifdef SCANLINES
+                    float s = 1.0 - smoothstep(320.0, 1440.0, outputSize.y) + 1.0;
+                    float j = cos(uv.y * outputSize.y * s) * 0.1;
+                    col = col - col * j;
+                    col *= 1.0 - (0.01 + ceil(mod((uv.x + 0.5) * outputSize.x, 3.0)) * (0.995 - 1.01));
+                    #endif
+                    
+                    #ifdef SHADOW_MASK
+                    col *= shadowMask(uv, outputSize);
+                    #endif
+                    
+                    
+                    #ifdef VIGNETTE
+                    vec2 vigUV = uv * (1.0 - uv.yx);
+                    float vignette = pow(vigUV.x * vigUV.y * 15.0, 0.25) * VIGNETTE_STRENGTH;
+                    col *= vignette;
+                    #endif
+                    
+                    return col;
+                }
+
+                void main() {
+                    if (u_crtEnabled) {
+                        outColor = vec4(crt(v_texCoord, u_resolution), 1.0);
+                    } else {
+                        outColor = getTexture(v_texCoord);
+                    }
+                }
+            `;
+
+            const vertexShader = compileShader(
+                gl,
+                gl.VERTEX_SHADER,
+                vertexShaderSource,
+            );
+            const fragmentShader = compileShader(
+                gl,
+                gl.FRAGMENT_SHADER,
+                fragmentShaderSource,
+            );
+
+            if (!vertexShader || !fragmentShader) {
+                console.error("Failed to compile shaders");
+                return;
+            }
+
+            program = gl.createProgram();
+            gl.attachShader(program, vertexShader);
+            gl.attachShader(program, fragmentShader);
+            gl.linkProgram(program);
+
+            if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+                console.error(
+                    "Shader program error:",
+                    gl.getProgramInfoLog(program),
+                );
+                return;
+            }
+
+            const positionLocation = gl.getAttribLocation(
+                program,
+                "a_position",
+            );
+            const texCoordLocation = gl.getAttribLocation(
+                program,
+                "a_texCoord",
+            );
+
+            positionBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.bufferData(
+                gl.ARRAY_BUFFER,
+                new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]),
+                gl.STATIC_DRAW,
+            );
+
+            const texCoordBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+            gl.bufferData(
+                gl.ARRAY_BUFFER,
+                new Float32Array([0, 1, 1, 1, 0, 0, 1, 0]),
+                gl.STATIC_DRAW,
+            );
+
+            gl.enableVertexAttribArray(positionLocation);
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+            gl.enableVertexAttribArray(texCoordLocation);
+            gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+            gl.vertexAttribPointer(texCoordLocation, 2, gl.FLOAT, false, 0, 0);
+        }
+
+        function compileShader(
+            gl: WebGL2RenderingContext,
+            type: number,
+            source: string,
+        ) {
+            const shader = gl.createShader(type);
+            if (!shader) {
+                console.error("Failed to create shader");
+                return null;
+            }
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                console.error(
+                    "Shader compile error:",
+                    gl.getShaderInfoLog(shader),
+                );
+                gl.deleteShader(shader);
+                return null;
+            }
+
+            return shader;
+        }
+
+        initWebGL();
+
+        resizeCanvasToDisplaySize(canvas);
+        gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
         worker.onmessage = (e) => {
             if (e.data.type === "print") {
@@ -56,22 +548,57 @@
             } else if (e.data.type === "printErr") {
                 addToConsole(e.data.text, true);
             } else if (e.data.type === "frame") {
-                var fb = new Uint32Array(e.data.framebuffer);
-                var imgData = ctx.createImageData(320, 200);
+                const fb = new Uint32Array(e.data.framebuffer);
+                const imgData = new Uint8Array(fb.length * 4);
 
                 for (let i = 0; i < fb.length; i++) {
                     let pixel = fb[i];
                     let offset = i * 4;
-                    imgData.data[offset] = (pixel >> 16) & 0xff; // red
-                    imgData.data[offset + 1] = (pixel >> 8) & 0xff; // green
-                    imgData.data[offset + 2] = pixel & 0xff; // blue
-                    imgData.data[offset + 3] = 0xff; // alpha
+                    imgData[offset] = (pixel >> 16) & 0xff;
+                    imgData[offset + 1] = (pixel >> 8) & 0xff;
+                    imgData[offset + 2] = pixel & 0xff;
+                    imgData[offset + 3] = 0xff;
                 }
 
-                ctx.putImageData(imgData, 0, 0);
+                const resolutionLocation = gl.getUniformLocation(
+                    program,
+                    "u_resolution",
+                );
+                const height = gl.canvas.height;
+                const width = gl.canvas.width;
+                gl.uniform2f(resolutionLocation, width, height);
+
+                const crtEnabledLocation = gl.getUniformLocation(
+                    program,
+                    "u_crtEnabled",
+                );
+                gl.uniform1i(crtEnabledLocation, $emulatorSettings.scanlines ? 1 : 0);
+
+                gl.bindTexture(gl.TEXTURE_2D, texture);
+                gl.texSubImage2D(
+                    gl.TEXTURE_2D,
+                    0,
+                    0,
+                    0,
+                    320,
+                    200,
+                    gl.RGBA,
+                    gl.UNSIGNED_BYTE,
+                    imgData,
+                );
+
+                gl.useProgram(program);
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            } else if (e.data.type === "updateInfo") {
+                clockSpeed = e.data.clockSpeed;
             }
         };
     });
+    function test() {
+        worker.postMessage({
+            type: "test",
+        });
+    }
 
     onDestroy(() => {
         if (worker) {
@@ -88,14 +615,16 @@
         </div>
     </div>
 
-    <canvas bind:this={canvas} id="canvas" width="320" height="200" style="image-rendering: pixelated;"></canvas>
+    <canvas
+        bind:this={canvas}
+        id="canvas"
+        style="image-rendering: pixelated;"
+        tabindex="1"
+    ></canvas>
 
     <div class="controls">
         <button class="btn" on:click={start}>
             <i class="fas fa-play"></i> Start
-        </button>
-        <button class="btn" on:click={renderFrame}>
-            <i class="fas fa-sync-alt"></i> Render Frame
         </button>
         <button class="btn btn-secondary" on:click={pause}>
             <i class="fas fa-pause"></i> Pause
@@ -106,15 +635,27 @@
         <button class="btn btn-secondary" on:click={screenshot}>
             <i class="fas fa-camera"></i> Screenshot
         </button>
+        <input
+            type="text"
+            placeholder="Text Input"
+            class="input-field"
+            bind:this={textInput}
+        />
+
+        <!-- <span class="clock-speed">
+            Clock Speed: {clockSpeed} Hz
+        </span> -->
     </div>
 </div>
 
 <style>
-    .emulator-container {
-        position: relative;
-        overflow: hidden;
+    .clock-speed {
+        font-size: 0.9rem;
+        color: var(--text);
+        margin-top: auto;
+        margin-bottom: auto;
+        font-weight: 600;
     }
-
     #canvas {
         width: 100%;
         height: auto;
@@ -123,5 +664,6 @@
         display: block;
         margin: 0 auto;
         border: 1px solid var(--glass-border);
+        aspect-ratio: 1.6;
     }
 </style>

@@ -20,6 +20,8 @@ public:
 
     void step();
 
+    int clockSpeed;
+
     CPU* cpu;
     Bus* bus;
     CIA1* cia1;

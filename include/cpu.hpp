@@ -5,7 +5,6 @@
 #include <bus.hpp>
 #include <array>
 #include <functional>
-#include <vector>
 #include <tuple>
 // https://www.nesdev.org/6502_cpu.txt
 // https://www.oxyron.de/html/opcodes02.html
@@ -44,8 +43,6 @@ enum class AddressingMode {
 #define OVERFLOW_FLAG 0b01000000
 #define NEGATIVE_FLAG 0b10000000
 
-#include <fstream>
-
 class CPU {
 public:
     CPU(Bus* bus);
@@ -76,8 +73,6 @@ public:
         return currentOpcode;
     }
 
-    std::string dump() const;
-
     void pushByte(uint8_t data);
     void pushWord(uint16_t data);
 
@@ -95,12 +90,8 @@ public:
 
 private:
     std::string currentInstruction;
-    std::ifstream logFile;
     size_t lastCycles;
-    size_t oldPC;
     uint8_t currentOpcode;
-
-    std::vector<uint8_t> fetchLogs;
 
     int loops;
 

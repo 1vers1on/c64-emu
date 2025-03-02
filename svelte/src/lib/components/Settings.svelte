@@ -1,7 +1,17 @@
 <script lang="ts">
+    // craete scanblines store
+    import { writable } from "svelte/store";
+
     import ToggleSwitch from "./ToggleSwitch.svelte";
     import SliderControl from "./SliderControl.svelte";
     import { emulatorSettings } from "$lib/stores/emulator";
+
+    // let scanlines = false;
+    const scanlines = writable(false);
+
+    // listen for changes in emulatorSettings
+
+    $: console.log("emulatorSettings", $emulatorSettings);
 </script>
 
 <div class="glass-panel settings-container">
@@ -13,8 +23,7 @@
     </div>
 
     <div class="setting-group">
-        <ToggleSwitch label="CRT Scanlines" bind:active={(emulatorSettings as any).scanlines} />
-
+        <ToggleSwitch label="CRT Scanlines" bind:active={$emulatorSettings.scanlines} />
         <ToggleSwitch
             label="Sound Enabled"
             bind:active={(emulatorSettings as any).soundEnabled}
@@ -46,6 +55,6 @@
     }
 
     .setting-group {
-        margin-top: 0.5rem;
+        margin-top: -0.5rem;
     }
 </style>

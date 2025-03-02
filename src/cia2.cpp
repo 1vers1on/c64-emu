@@ -13,7 +13,7 @@ CIA2::~CIA2() {
 }
 
 inline uint8_t BCDToDecimal(uint8_t bcd) {
-    return ((bcd & 0xF0) >> 4) * 10 + (bcd & 0x0F);
+    return ((bcd >> 4) * 10) + (bcd & 0x0F);
 }
 
 inline uint8_t decimalToBCD(uint8_t decimal) {
@@ -26,113 +26,105 @@ void CIA2::IECBusWrite(bool clock, bool data) {
 }
 
 void CIA2::write(uint16_t addr, uint8_t data) {
-    std::cout << "CIA2 write to address: " << std::hex << addr << " with data: " << static_cast<int>(data) << std::dec << std::endl;
+    std::cout << "CIA2 write to address: " << std::hex << addr 
+              << " with data: " << static_cast<int>(data) << std::dec << std::endl;
     addr &= 0x0F;
-    if (addr == PORTA) {
-        switch (registers[PORTA] & 0b11) {
-            case 0b11:
-                bus->vic->bankAddress = 0x0000;
-                break;
-            case 0b10:
-                bus->vic->bankAddress = 0x4000;
-                break;
-            case 0b01:
-                bus->vic->bankAddress = 0x8000;
-                break;
-            case 0b00:
-                bus->vic->bankAddress = 0xC000;
-                break;
-        }
-
-        uint8_t oldSerial = (registers[PORTA] & 0b11000111) >> 3;
-        uint8_t serial = (registers[PORTA] & 0b11000111) >> 3;
-        if (iecBusCallback) {
-            if ((oldSerial & 0b00000001) != (data & 0b00000001)) {
-                iecBusCallback(serial & 0b00000001, serial & 0b00000010, serial & 0b00000100);
+    switch (addr) {
+        case PORTA: {
+            // set bank address based on lower 2 bits of previous port a value
+            switch (registers[PORTA] & 0b11) {
+                case 0b11:
+                    bus->vic->bankAddress = 0x0000;
+                    break;
+                case 0b10:
+                    bus->vic->bankAddress = 0x4000;
+                    break;
+                case 0b01:
+                    bus->vic->bankAddress = 0x8000;
+                    break;
+                case 0b00:
+                    bus->vic->bankAddress = 0xC000;
+                    break;
             }
-            if ((oldSerial & 0b00000010) != (data & 0b00000010)) {
-                iecBusCallback(serial & 0b00000001, serial & 0b00000010, serial & 0b00000100);
+
+            uint8_t oldSerial = (registers[PORTA] & 0b11000111) >> 3;
+            uint8_t serial    = (registers[PORTA] & 0b11000111) >> 3;
+            if (iecBusCallback) {
+                if ((oldSerial & 0b00000001) != (data & 0b00000001))
+                    iecBusCallback(serial & 0b00000001, serial & 0b00000010, serial & 0b00000100);
+                if ((oldSerial & 0b00000010) != (data & 0b00000010))
+                    iecBusCallback(serial & 0b00000001, serial & 0b00000010, serial & 0b00000100);
+                if ((oldSerial & 0b00000100) != (data & 0b00000100))
+                    iecBusCallback(serial & 0b00000001, serial & 0b00000010, serial & 0b00000100);
             }
-            if ((oldSerial & 0b00000100) != (data & 0b00000100)) {
-                iecBusCallback(serial & 0b00000001, serial & 0b00000010, serial & 0b00000100);
-            }
+
+            if ((oldSerial & 0b11000000) != (data & 0b11000000))
+                return;
+            break;
         }
-
-        if ((oldSerial & 0b11000000) != (data & 0b11000000)) {
-            return;
-        }
+        case TIMER_A_LOW:
+            timerAReload = (timerAReload & 0xFF00) | data;
+            timerA = timerAReload;
+            break;
+        case TIMER_A_HIGH:
+            timerAReload = (timerAReload & 0x00FF) | (data << 8);
+            timerA = timerAReload;
+            break;
+        case TIMER_B_LOW:
+            timerBReload = (timerBReload & 0xFF00) | data;
+            timerB = timerBReload;
+            break;
+        case TIMER_B_HIGH:
+            timerBReload = (timerBReload & 0x00FF) | (data << 8);
+            timerB = timerBReload;
+            break;
+        case TIME_OF_DAY_TENTHS:
+            tenthsSeconds = BCDToDecimal(data);
+            break;
+        case TIME_OF_DAY_SECONDS:
+            singleSeconds = BCDToDecimal(data & 0x0F);
+            tensSeconds = BCDToDecimal(data >> 4);
+            break;
+        case TIME_OF_DAY_MINUTES:
+            singleMinutes = BCDToDecimal(data & 0x0F);
+            tensMinutes = BCDToDecimal(data >> 4);
+            break;
+        case TIME_OF_DAY_HOURS:
+            singleHours = BCDToDecimal(data & 0x0F);
+            tensHours = BCDToDecimal((data & 0x30) >> 4);
+            PM = data & 0x20;
+            break;
+        default:
+            break;
     }
-    if (addr == TIMER_A_LOW) {
-        timerAReload = (timerAReload & 0xFF00) | data;
-        timerA = timerAReload;
-    }
-    if (addr == TIMER_A_HIGH) {
-        timerAReload = (timerAReload & 0x00FF) | (data << 8);
-        timerA = timerAReload;
-    }
-    if (addr == TIMER_B_LOW) {
-        timerBReload = (timerBReload & 0xFF00) | data;
-        timerB = timerBReload;
-    }
-    if (addr == TIMER_B_HIGH) {
-        timerBReload = (timerBReload & 0x00FF) | (data << 8);
-        timerB = timerBReload;
-    }
-
-    if (addr == TIME_OF_DAY_TENTHS) {
-        tenthsSeconds = BCDToDecimal(data);
-    }
-
-    if (addr == TIME_OF_DAY_SECONDS) {
-        singleSeconds = BCDToDecimal(data & 0x0F);
-        tensSeconds = BCDToDecimal((data & 0xF0) >> 4);
-    }
-
-    if (addr == TIME_OF_DAY_MINUTES) {
-        singleMinutes = BCDToDecimal(data & 0x0F);
-        tensMinutes = BCDToDecimal((data & 0xF0) >> 4);
-    }
-
-    if (addr == TIME_OF_DAY_HOURS) {
-        singleHours = BCDToDecimal(data & 0x0F);
-        tensHours = BCDToDecimal((data & 0x30) >> 4);
-        PM = data & 0x20;
-    }
-
     registers[addr] = data;
 }
 
 uint8_t CIA2::read(uint16_t addr) {
     std::cout << "CIA2 read from address: " << std::hex << addr << std::dec << std::endl;
     addr &= 0x0F;
-    if (addr == PORTA) {
-        return registers[PORTA] & 0b00111111 | (clockIn << 6) | (dataIn << 7);
+    switch (addr) {
+        case PORTA:
+            return (registers[PORTA] & 0b00111111) | (clockIn << 6) | (dataIn << 7);
+        case TIMER_A_LOW:
+            return timerA & 0xFF;
+        case TIMER_A_HIGH:
+            return timerA >> 8;
+        case TIMER_B_LOW:
+            return timerB & 0xFF;
+        case TIMER_B_HIGH:
+            return timerB >> 8;
+        case TIME_OF_DAY_TENTHS:
+            return decimalToBCD(tenthsSeconds);
+        case TIME_OF_DAY_SECONDS:
+            return decimalToBCD(singleSeconds) | (decimalToBCD(tensSeconds) << 4);
+        case TIME_OF_DAY_MINUTES:
+            return decimalToBCD(singleMinutes) | (decimalToBCD(tensMinutes) << 4);
+        case TIME_OF_DAY_HOURS:
+            return decimalToBCD(singleHours) | (decimalToBCD(tensHours) << 4) | (PM << 5);
+        default:
+            return registers[addr];
     }
-    if (addr == TIMER_A_LOW) {
-        return timerA & 0xFF;
-    }
-    if (addr == TIMER_A_HIGH) {
-        return timerA >> 8;
-    }
-    if (addr == TIMER_B_LOW) {
-        return timerB & 0xFF;
-    }
-    if (addr == TIMER_B_HIGH) {
-        return timerB >> 8;
-    }
-    if (addr == TIME_OF_DAY_TENTHS) {
-        return decimalToBCD(tenthsSeconds);
-    }
-    if (addr == TIME_OF_DAY_SECONDS) {
-        return decimalToBCD(singleSeconds) | (decimalToBCD(tensSeconds) << 4);
-    }
-    if (addr == TIME_OF_DAY_MINUTES) {
-        return decimalToBCD(singleMinutes) | (decimalToBCD(tensMinutes) << 4);
-    }
-    if (addr == TIME_OF_DAY_HOURS) {
-        return decimalToBCD(singleHours) | (decimalToBCD(tensHours) << 4) | (PM << 5);
-    }
-    return registers[addr];
 }
 
 void CIA2::tick() {
@@ -172,8 +164,7 @@ void CIA2::tick() {
     }
 
     if (registers[TIMER_A_CONTROL_REGISTER] & 0x01) {
-        timerA -= 1;
-        if (timerA == 0) {
+        if (--timerA == 0) {
             if (registers[INTERRUPT_CONTROL_REGISTER] & 0x01) {
                 triggerNMI(0);
             }
@@ -187,8 +178,7 @@ void CIA2::tick() {
     }
 
     if (registers[TIMER_B_CONTROL_REGISTER] & 0x01) {
-        timerB -= 1;
-        if (timerB == 0) {
+        if (--timerB == 0) {
             if (registers[INTERRUPT_CONTROL_REGISTER] & 0x02) {
                 triggerNMI(1);
             }

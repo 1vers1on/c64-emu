@@ -23,10 +23,7 @@
     </div>
 
     <div class="footer">
-        1vers1on &copy; 2025 | Built with <i
-            class="fas fa-heart"
-            style="color: var(--primary);"
-        ></i>
+        <span style="opacity: 0.7;">1vers1on &copy; 2025</span> | <span>🏳️‍⚧️</span>
     </div>
 </div>
 
