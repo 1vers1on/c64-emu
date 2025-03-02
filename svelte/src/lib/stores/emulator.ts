@@ -6,6 +6,8 @@ export interface Settings {
     soundEnabled: boolean;
     volume: number;
     speed: number;
+    loadState: boolean;
+    saveState: boolean;
 }
 
 // Create a store for console output
@@ -16,7 +18,9 @@ export const emulatorSettings: Writable<Settings> = writable({
     scanlines: false,
     soundEnabled: true,
     volume: 75,
-    speed: 100
+    speed: 100,
+    loadState: false,
+    saveState: false,
 });
 
 // Function to add output to the console

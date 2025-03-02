@@ -1,6 +1,10 @@
 <script lang="ts">
-    export let active = false;
-    export let label = "";
+    interface Props {
+        active?: boolean;
+        label?: string;
+    }
+
+    let { active = $bindable(false), label = "" }: Props = $props();
 
     function toggle() {
         active = !active;
@@ -9,7 +13,7 @@
 
 <div class="setting-item">
     <div class="setting-name">{label}</div>
-    <div class="toggle" class:active on:click={toggle}></div>
+    <div class="toggle" class:active onclick={toggle}></div>
 </div>
 
 <style>

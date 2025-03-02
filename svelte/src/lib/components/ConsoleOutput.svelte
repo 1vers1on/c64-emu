@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { run } from 'svelte/legacy';
+
     import { onMount } from "svelte";
     import { consoleOutput } from "$lib/stores/emulator.js";
 
@@ -14,12 +16,14 @@
         $consoleOutput = "";
     }
 
-    let outputElement: HTMLDivElement;
-    $: if (outputElement && $consoleOutput) {
-        setTimeout(() => {
-            outputElement.scrollTop = outputElement.scrollHeight;
-        }, 0);
-    }
+    let outputElement: HTMLDivElement = $state();
+    run(() => {
+        if (outputElement && $consoleOutput) {
+            setTimeout(() => {
+                outputElement.scrollTop = outputElement.scrollHeight;
+            }, 0);
+        }
+    });
 
     onMount(() => {
     });
@@ -31,7 +35,7 @@
         <button
             class="btn btn-secondary"
             style="padding: 0.2rem 0.5rem;"
-            on:click={clearOutput}
+            onclick={clearOutput}
             aria-label="Clear console output"
         >
             <i class="fas fa-trash-alt"></i>

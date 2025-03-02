@@ -11,7 +11,7 @@
 
     // listen for changes in emulatorSettings
 
-    $: console.log("emulatorSettings", $emulatorSettings);
+    // $: console.log("emulatorSettings", $emulatorSettings);
 </script>
 
 <div class="glass-panel settings-container">
@@ -23,14 +23,15 @@
     </div>
 
     <div class="setting-group">
-        <ToggleSwitch label="CRT Scanlines" bind:active={$emulatorSettings.scanlines} />
+        i broke it :(
+        <!-- <ToggleSwitch label="CRT Scanlines" bind:active={$emulatorSettings.scanlines} />
         <ToggleSwitch
             label="Sound Enabled"
             bind:active={(emulatorSettings as any).soundEnabled}
-        />
+        /> -->
     </div>
 
-    <SliderControl
+    <!-- <SliderControl
         label="Volume"
         bind:value={(emulatorSettings as any).volume}
         min={0}
@@ -44,7 +45,7 @@
         min={50}
         max={200}
         unit="%"
-    />
+    /> -->
 </div>
 
 <style>

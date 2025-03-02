@@ -15,8 +15,27 @@ std::array<uint32_t, 40 * 25 * 8 * 8> lastFramebuffer = {};
 std::chrono::steady_clock::time_point lastTime = std::chrono::steady_clock::now();
 
 System emulatorSystem;
+bool paused = false;
 
 extern "C" {
+    EMSCRIPTEN_KEEPALIVE
+    void reset() {
+        std::cout << "Resetting emulator" << std::endl;
+        emulatorSystem.reset();
+    }
+
+    void pause() {
+        paused = true;
+    }
+
+    void resume() {
+        paused = false;
+    }
+
+    uint8_t* getMemory() {
+        return emulatorSystem.bus->ram;
+    }
+
     EMSCRIPTEN_KEEPALIVE
     void keyDown(const char* key) {
         std::string keyStr(key);
@@ -61,6 +80,10 @@ extern "C" {
 
         while (true) {
             emulatorSystem.step();
+            if (paused) {
+                emscripten_sleep(5);
+                continue;
+            }
 
             auto currentTime = std::chrono::steady_clock::now();
             std::chrono::duration<double> elapsed = currentTime - lastTime;

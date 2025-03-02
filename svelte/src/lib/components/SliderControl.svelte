@@ -1,11 +1,21 @@
 <script lang="ts">
-    export let label = "";
-    export let min = 0;
-    export let max = 100;
-    export let value = 50;
-    export let unit = "%";
+    interface Props {
+        label?: string;
+        min?: number;
+        max?: number;
+        value?: number;
+        unit?: string;
+    }
 
-    $: displayValue = `${value}${unit}`;
+    let {
+        label = "",
+        min = 0,
+        max = 100,
+        value = $bindable(50),
+        unit = "%"
+    }: Props = $props();
+
+    let displayValue = $derived(`${value}${unit}`);
 </script>
 
 <div class="slider-control">

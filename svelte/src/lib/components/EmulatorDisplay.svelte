@@ -25,11 +25,6 @@
         addToConsole("Emulation paused");
     }
 
-    function reset() {
-        console.log("Emulator reset");
-        clearConsole();
-    }
-
     function screenshot() {
         const image = canvas.toDataURL("image/png");
 
@@ -591,6 +586,17 @@
                 gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
             } else if (e.data.type === "updateInfo") {
                 clockSpeed = e.data.clockSpeed;
+            } else if (e.data.type === "saveState") {
+                const blob = new Blob([e.data.memory], { type: "application/octet-stream" });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.style.display = "none";
+                link.href = url;
+                link.download = "commodore64-state.bin";
+                link.click();
+                // document.body.removeChild(link);
+                link.remove();
+                URL.revokeObjectURL(url);
             }
         };
     });
@@ -598,6 +604,67 @@
         worker.postMessage({
             type: "test",
         });
+    }
+
+    function reset() {
+        worker.postMessage({
+            type: "reset",
+        });
+    }
+
+    $effect(() => {
+        console.log("emulatorS234ettings", $emulatorSettings);
+    });
+
+    emulatorSettings.subscribe((settings) => {
+        // worker.postMessage({
+        //     type: "updateSettings",
+        //     settings,
+        // });
+        if (settings.loadState) {
+            loadState();
+            emulatorSettings.update((s) => {
+                s.loadState = false;
+                return s;
+            });
+        }
+        if (settings.saveState) {
+            saveState();
+            emulatorSettings.update((s) => {
+                s.saveState = false;
+                return s;
+            });
+        }
+    });
+    
+    export function saveState() {
+        worker.postMessage({
+            type: "saveState",
+        });
+    }
+
+    export function loadState() {
+        const input = document.createElement("input");
+        input.style.display = "none";
+        input.type = "file";
+        input.accept = ".bin";
+        input.onchange = (event) => {
+            const file = (event.target as HTMLInputElement).files?.[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    worker.postMessage({
+                        type: "loadState",
+                        state: reader.result,
+                    });
+                };
+                reader.readAsArrayBuffer(file);
+            } else {
+                alert("Failed to load file");
+            }
+        };
+        input.click();
+        input.remove();
     }
 
     onDestroy(() => {

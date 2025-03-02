@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { emulatorSettings  } from "$lib/stores/emulator";
     function virtualKeyboard() {
         console.log("Virtual keyboard activated");
     }
@@ -11,8 +12,19 @@
         console.log("Load program dialog");
     }
 
+    function loadState() {
+        emulatorSettings.update(settings => {
+            // settings.saveState = !settings.saveState;
+            settings.loadState = true;
+            return settings;
+        });
+    }
+
     function saveState() {
-        console.log("Save state");
+        emulatorSettings.update(settings => {
+            settings.saveState = true;
+            return settings;
+        });
     }
 
     function exportFile() {
@@ -33,22 +45,22 @@
     </div>
 
     <div class="controls">
-        <button class="btn btn-secondary" on:click={virtualKeyboard}>
+        <button class="btn btn-secondary" onclick={virtualKeyboard}>
             <i class="fas fa-keyboard"></i> Virtual Keyboard
         </button>
-        <button class="btn btn-secondary" on:click={joystickMode}>
+        <button class="btn btn-secondary" onclick={joystickMode}>
             <i class="fas fa-gamepad"></i> Joystick Mode
         </button>
-        <button class="btn btn-secondary" on:click={loadProgram}>
-            <i class="fas fa-folder-open"></i> Load Program
+        <button class="btn btn-secondary" onclick={saveState}>
+            <i class="fas fa-save"></i> Save Memory        
         </button>
-        <button class="btn btn-secondary" on:click={saveState}>
-            <i class="fas fa-save"></i> Save State
-        </button>
-        <button class="btn btn-secondary" on:click={exportFile}>
+        <!-- <button class="btn btn-secondary" onclick={loadState}>
+            <i class="fas fa-folder-open"></i> Load State
+        </button> -->
+        <button class="btn btn-secondary" onclick={exportFile}>
             <i class="fas fa-download"></i> Export
         </button>
-        <button class="btn btn-secondary" on:click={showHelp}>
+        <button class="btn btn-secondary" onclick={showHelp}>
             <i class="fas fa-question-circle"></i> Help
         </button>
     </div>

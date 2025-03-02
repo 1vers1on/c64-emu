@@ -1,5 +1,7 @@
 import initModule from "./main.js";
 
+let paused = false;
+let running = false;
 
 const Module = {
     onRuntimeInitialized: function () {
@@ -44,7 +46,7 @@ function writeToMemory(location, byte) {
         printErr("Invalid byte: " + byte);
         return;
     }
-    location %= 0x100000;
+    location %= 0xffff;
     byte %= 256;
     Module.ccall('writeToMemory', null, ['number', 'number'], [location, byte]);
 }
@@ -54,7 +56,7 @@ function readFromMemory(location) {
         printErr("Invalid address: " + location);
         return;
     }
-    location %= 0x100000;
+    location %= 0xffff;
     return Module.ccall('readFromMemory', 'number', ['number'], [location]);
 }
 
@@ -101,7 +103,12 @@ initModule(Module);
 onmessage = function (e) {
     let data = e.data;
     if (data.type === "start") {
-        Module.ccall("startEmulator", null, [], []);
+        if (running) {
+            paused = false;
+            Module.ccall("resume", null, [], []);
+        } else {
+            Module.ccall("startEmulator", null, [], []);
+        }
     } 
     if (data.type === "keyUp") {
         Module.ccall("keyUp", null, ["string"], [data.key]);
@@ -126,5 +133,22 @@ onmessage = function (e) {
         }
         let value = readFromMemory(data.location);
         postMessage({ type: "readFromMemory", location: data.location, value: value });
+    }
+    if (data.type === "reset") {
+        Module.ccall("reset", null, [], []);
+    }
+    if (data.type === "pause") {
+        paused = true;
+        Module.ccall("togglePause", null, [], []);
+    }
+    if (data.type === "saveState") {
+        let memoryPointer = Module.ccall("getMemory", "number", [], []);
+        let memory = new Uint8Array(Module.HEAPU8.buffer, memoryPointer, 0xffff);
+        postMessage({ type: "saveState", memory: memory });
+    }
+    if (data.type === "loadState") {
+        let memoryPointer = Module.ccall("getMemory", "number", [], []);
+        let memory = new Uint8Array(Module.HEAPU8.buffer, memoryPointer, 0xffff);
+        memory.set(new Uint8Array(data.memory));
     }
 };
