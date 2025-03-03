@@ -2,12 +2,19 @@
     interface Props {
         active?: boolean;
         label?: string;
+        turnOn?: () => void;
+        turnOff?: () => void;
     }
 
-    let { active = $bindable(false), label = "" }: Props = $props();
+    let { active = $bindable(false), label = "", turnOn, turnOff }: Props = $props();
 
     function toggle() {
         active = !active;
+        if (active && turnOn) {
+            turnOn();
+        } else if (!active && turnOff) {
+            turnOff();
+        }
     }
 </script>
 

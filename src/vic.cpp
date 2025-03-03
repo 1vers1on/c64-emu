@@ -94,7 +94,7 @@ void VIC::handleRasterInterrupts() {
 void VIC::handleDMASteal() {
     bool badLine = ((rasterLine & 0x07) == (registers[0x11] & 0x07));
     if (badLine) {
-        cpu->stallCycles(35);
+        cpu->stallCycles(40);
     }
 }
 
@@ -104,55 +104,102 @@ void VIC::renderScanline() {
     int effectiveScanline = (rasterLine + vScroll) % 200;
     int charRow = effectiveScanline / 8;
     int pixelRowWithinChar = effectiveScanline % 8;
+    int baseScreenRow = charRow * 40;
 
-    // use fixed-size array for the line buffer
-    std::array<uint32_t, 320> lineBuffer = {0};
+    std::array<uint32_t, 320> lineBuffer;
+    lineBuffer.fill(0);
+    if (!multiColorMode) {
+        for (int cellX = 0; cellX < 40; cellX++) {
+            uint16_t screenAddr = baseScreenRow + cellX;
+            uint8_t charCode = bus->read(screenAddr + bankAddress + screenMemoryOffset);
+            uint8_t colorCode = bus->read(0xD800 + screenAddr);
+            uint16_t charRomAddr = charCode * 8 + pixelRowWithinChar;
+            uint8_t charData = 0;
 
-    for (int cellX = 0; cellX < 40; cellX++) {
-        uint16_t screenAddr = charRow * 40 + cellX;
-        uint8_t charCode = bus->read(screenAddr + bankAddress + screenMemoryOffset);
-        uint8_t colorCode = bus->read(0xD800 + charRow * 40 + cellX);
-        uint16_t charRomAddr = charCode * 8 + pixelRowWithinChar;
-        uint8_t charData = 0;
-
-        if (bankAddress == 0x0000 || bankAddress == 0x8000) {
-            if (charMemOffset == 0x1000 || charMemOffset == 0x1800) {
-                charData = bus->readCharRom(charRomAddr);
+            if (bankAddress == 0x0000 || bankAddress == 0x8000) {
+                if (charMemOffset == 0x1000 || charMemOffset == 0x1800) {
+                    charData = bus->readCharRom(charRomAddr);
+                } else {
+                    charData = bus->read(charRomAddr + charMemOffset + bankAddress);
+                }
+            } else if (bitmapMode) {
+                charData = bus->read(bitmapOffset + bankAddress + screenAddr);
             } else {
                 charData = bus->read(charRomAddr + charMemOffset + bankAddress);
             }
-        } else if (bitmapMode) {
-            charData = bus->read(bitmapOffset + bankAddress + screenAddr);
-        } else {
-            charData = bus->read(charRomAddr + charMemOffset + bankAddress);
-        }
 
-        uint32_t cellPixels[8];
-        for (int bit = 0; bit < 8; bit++) {
-            bool pixelOn = ((charData >> (7 - bit)) & 0x01) != 0;
-            if (bitmapMode) {
-                cellPixels[bit] = pixelOn ? getColor(charCode & 0x0F) : getColor((charCode & 0xF0) >> 4);
-            } else {
-                cellPixels[bit] = pixelOn ? getColor(colorCode) : getColor(registers[0x21]);
+            int basePixelIndex = cellX * 8;
+            for (int bit = 0; bit < 8; bit++) {
+                bool pixelOn = ((charData >> (7 - bit)) & 0x01) != 0;
+                if (bitmapMode) {
+                    lineBuffer[basePixelIndex + bit] = pixelOn ? getColor(charCode & 0x0F)
+                                                            : getColor((charCode & 0xF0) >> 4);
+                } else {
+                    lineBuffer[basePixelIndex + bit] = pixelOn ? getColor(colorCode)
+                                                            : getColor(registers[0x21]);
+                }
             }
         }
+    } else {
+        for (int cellX = 0; cellX < 20; cellX++) {
+            uint16_t screenAddr = baseScreenRow + cellX;
+            uint8_t charCode = bus->read(screenAddr + bankAddress + screenMemoryOffset);
+            uint8_t colorCode = bus->read(0xD800 + screenAddr);
+            uint16_t charRomAddr = charCode * 8 + pixelRowWithinChar;
+            uint8_t charData = 0;
 
-        for (int bit = 0; bit < 8; bit++) {
-            int pixelIndex = cellX * 8 + bit;
-            lineBuffer[pixelIndex] = cellPixels[bit];
+            if (bankAddress == 0x0000 || bankAddress == 0x8000) {
+                if (charMemOffset == 0x1000 || charMemOffset == 0x1800) {
+                    charData = bus->readCharRom(charRomAddr);
+                } else {
+                    charData = bus->read(charRomAddr + charMemOffset + bankAddress);
+                }
+            } else if (bitmapMode) {
+                charData = bus->read(bitmapOffset + bankAddress + screenAddr);
+            } else {
+                charData = bus->read(charRomAddr + charMemOffset + bankAddress);
+            }
+
+            int basePixelIndex = cellX * 8;
+            for (int bit = 0; bit < 4; bit++) {
+                uint8_t colorIndex = (charData >> (6 - bit * 2)) & 0x03;
+                uint32_t color;
+                switch (colorIndex) {
+                    case 0b00:
+                        color = getColor(registers[0x21]);
+                        break;
+                    case 0b01:
+                        color = getColor(registers[0x22] & 0x0F);
+                        break;
+                    case 0b10:
+                        color = getColor(registers[0x23] & 0x0F);
+                        break;
+                    case 0b11:
+                        color = getColor(colorCode & 0x0F);
+                        break;
+                }
+
+                for (int i = 0; i < 2; i++) {
+                    lineBuffer[basePixelIndex + bit * 2 + i] = color;
+                }
+            }
         }
-    }
-
-    // perform horizontal scrolling via a temporary array
-    std::array<uint32_t, 320> shiftedLine;
-    for (int i = 0; i < 320; i++) {
-        int shiftedIndex = (i + hScroll) % 320;
-        shiftedLine[i] = lineBuffer[shiftedIndex];
     }
 
     int y = effectiveScanline;
-    for (int x = 0; x < 320; x++) {
-        screen[y * 320 + x] = shiftedLine[x];
+    // perform horizontal scrolling directly into the screen row
+    if (hScroll == 0) {
+        for (int x = 0; x < 320; x++) {
+            screen[y * 320 + x] = lineBuffer[x];
+        }
+    } else {
+        int tail = 320 - hScroll;
+        for (int x = 0; x < tail; x++) {
+            screen[y * 320 + x] = lineBuffer[x + hScroll];
+        }
+        for (int x = 0; x < hScroll; x++) {
+            screen[y * 320 + tail + x] = lineBuffer[x];
+        }
     }
 }
 

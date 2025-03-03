@@ -8,6 +8,17 @@
 
     // let scanlines = false;
     const scanlines = writable(false);
+    function turnOn() {
+        emulatorSettings.update((settings) => {
+            return { ...settings, scanlines: true };
+        });
+    }
+
+    function turnOff() {
+        emulatorSettings.update((settings) => {
+            return { ...settings, scanlines: false };
+        });
+    }
 
     // listen for changes in emulatorSettings
 
@@ -23,9 +34,8 @@
     </div>
 
     <div class="setting-group">
-        i broke it :(
-        <!-- <ToggleSwitch label="CRT Scanlines" bind:active={$emulatorSettings.scanlines} />
-        <ToggleSwitch
+        <ToggleSwitch label="CRT Scanlines" bind:active={$emulatorSettings.scanlines} turnOn={turnOn} turnOff={turnOff} />
+        <!-- <ToggleSwitch
             label="Sound Enabled"
             bind:active={(emulatorSettings as any).soundEnabled}
         /> -->

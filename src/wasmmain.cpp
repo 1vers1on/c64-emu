@@ -94,6 +94,7 @@ extern "C" {
                 EM_ASM({
                     processOtherStuff();
                 });
+                std::cout << getClockSpeed() << std::endl;
 
                 emulatorSystem.vic->needsRender = true;
             }
