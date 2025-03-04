@@ -1478,10 +1478,12 @@ void CPU::pushWord(uint16_t data) {
 
 void CPU::stepCycles(size_t cycles) {        
     this->cycles += cycles;
-
-    if (cycleCallback) {
-        cycleCallback();
-    }    
+    bus->cia1->tick();
+    bus->cia2->tick();
+    bus->vic->tick();
+    // if (cycleCallback) {
+    //     cycleCallback();
+    // }    
 }
 
 

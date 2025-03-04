@@ -135,7 +135,7 @@ void VIC::renderScanline() {
                     lineBuffer[basePixelIndex + bit] = pixelOn ? getColor(charCode & 0x0F)
                                                             : getColor((charCode & 0xF0) >> 4);
                 } else {
-                    lineBuffer[basePixelIndex + bit] = pixelOn ? getColor(colorCode)
+                    lineBuffer[basePixelIndex + bit] = pixelOn ? getColor(colorCode & 0x0F)
                                                             : getColor(registers[0x21]);
                 }
             }
@@ -204,12 +204,23 @@ void VIC::renderScanline() {
 }
 
 uint32_t VIC::getColor(uint8_t colorCode) {
-    // c64 colors mapped to rgb
     static const uint32_t colors[] = {
-        0x000000, 0xFFFFFF, 0x880000, 0xAAFFEE,
-        0xCC44CC, 0x00CC55, 0x0000AA, 0xEEEE77,
-        0xDD8855, 0x664400, 0xFF7777, 0x333333,
-        0x777777, 0xAAFF66, 0x0088FF, 0xBBBBBB
+        0x000000,  // 0: Black
+        0xFFFFFF,  // 1: White
+        0x894036,  // 2: Red
+        0x7abfc7,  // 3: Cyan
+        0x8a46ae,  // 4: Purple
+        0x68a941,  // 5: Green
+        0x3e31a2,  // 6: Blue
+        0xd0dc71,  // 7: Yellow
+        0x905f25,  // 8: Orange
+        0x5c4700,  // 9: Brown
+        0xbb776d,  // 10: Light Red
+        0x555555,  // 11: Dark Grey
+        0x808080,  // 12: Medium Grey
+        0xacea88,  // 13: Light Green
+        0x7c70da,  // 14: Light Blue
+        0xababab   // 15: Light Grey
     };
     return colors[colorCode & 0x0F];
 }

@@ -18,10 +18,18 @@ const Module = {
 };
 
 self.framebufferReady = function() {
-    var fbPtr = Module.ccall('getFramebuffer', 'number', [], []);
-    var length = 320 * 200;
-    var fb = new Uint32Array(Module.HEAPU32.buffer, fbPtr, length);
-    postMessage({ type: "frame", framebuffer: fb });
+    // var fbPtr = Module.ccall('getFramebuffer', 'number', [], []);
+    // var length = 320 * 200;
+    // var fb = new Uint32Array(Module.HEAPU32.buffer, fbPtr, length);
+    // postMessage({ type: "frame", framebuffer: fb });
+    let fbDiffSize = Module.ccall('getDiffSize', 'number', [], []);
+    if (fbDiffSize === 0) {
+        return;
+    }
+
+    let fbDiffPtr = Module.ccall('getDiff', 'number', [], []);
+    let fbDiff = new Uint32Array(Module.HEAPU32.buffer, fbDiffPtr, fbDiffSize);
+    postMessage({ type: "frameDiff", diff: fbDiff });
 };
 
 self.processOtherStuff = function() {

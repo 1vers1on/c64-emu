@@ -12,6 +12,8 @@
 #include <emscripten.h>
 
 std::array<uint32_t, 40 * 25 * 8 * 8> lastFramebuffer = {};
+// std::array<uint32_t, 40 * 25 * 8 * 8> lastLastFramebuffer = {};
+std::vector<uint32_t> fbDiff = {};
 std::chrono::steady_clock::time_point lastTime = std::chrono::steady_clock::now();
 
 System emulatorSystem;
@@ -71,9 +73,42 @@ extern "C" {
     }
 
     EMSCRIPTEN_KEEPALIVE
+    uint32_t getDiffSize() {
+        return fbDiff.size();
+    }
+
+    EMSCRIPTEN_KEEPALIVE
+    uint32_t* getDiff() {
+        return fbDiff.data();
+    }
+
+    EMSCRIPTEN_KEEPALIVE
     void startEmulator() {
         std::cout << "Starting emulator" << std::endl;
         emulatorSystem.vic->setFramebufferCallback([](std::array<uint32_t, 40 * 25 * 8 * 8>& screen) {
+            fbDiff.clear();
+            
+            size_t i = 0;
+            while (i < screen.size()) {
+                if (screen[i] != lastFramebuffer[i]) {
+                    size_t runStart = i;
+                    uint32_t color = screen[i];
+                    
+                    do {
+                        i++;
+                    } while (i < screen.size() && 
+                            screen[i] == color && 
+                            (screen[i] != lastFramebuffer[i] || i == runStart + 1));
+                    
+                    fbDiff.push_back(runStart);
+                    fbDiff.push_back(i - runStart);
+                    fbDiff.push_back(color);
+                } else {
+                    i++;
+                }
+            }
+            
+            
             std::memcpy(lastFramebuffer.data(), screen.data(), screen.size() * sizeof(uint32_t));
         });
         emulatorSystem.powerOn();
@@ -95,8 +130,6 @@ extern "C" {
                     processOtherStuff();
                 });
                 std::cout << getClockSpeed() << std::endl;
-
-                emulatorSystem.vic->needsRender = true;
             }
 
             if (emulatorSystem.vic->needsRender) {

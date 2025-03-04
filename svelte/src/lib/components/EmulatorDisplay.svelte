@@ -280,6 +280,15 @@
                 #define saturate(x) clamp(x, 0.0, 1.0)
                     float ToSrgb1(float c){return(c<0.0031308?c*12.92:1.055*pow(c,0.41666)-0.055);}
                     vec4 ToSrgb(vec4 c){return vec4(ToSrgb1(c.r),ToSrgb1(c.g),ToSrgb1(c.b),ToSrgb1(c.a));}
+
+                vec4 gammaCorrect(vec4 color) {
+                    return vec4(
+                        pow(color.r, 1.0 / 2.2),
+                        pow(color.g, 1.0 / 2.2),
+                        pow(color.b, 1.0 / 2.2),
+                        color.a
+                    );
+                }
                 vec4 getTexture(vec2 uv) {
                     vec2 textureDimensions = vec2(320.0, 200.0);
                     float scaleFactor = 0.5;
@@ -292,9 +301,9 @@
                     
                     if (scaledCoord.x >= 0.0 && scaledCoord.x < textureDimensions.x && 
                         scaledCoord.y >= 0.0 && scaledCoord.y < textureDimensions.y) {
-                        return ToSrgb(texelFetch(u_image, ivec2(scaledCoord), 0));
+                        return texelFetch(u_image, ivec2(scaledCoord), 0);
                     } else {
-                        return vec4(0.396078431372549, 0.4392156862745098, 0.7450980392156863, 1.0);
+                        return vec4(0.48627450980392156, 0.4392156862745098, 0.8549019607843137, 1.0);
                     }
                 }
 
@@ -536,6 +545,8 @@
         resizeCanvasToDisplaySize(canvas);
         gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
+        let frame = new Uint32Array(320 * 200);
+
         worker.onmessage = (e) => {
             if (e.data.type === "print") {
                 console.log(e.data.text);
@@ -544,10 +555,71 @@
                 addToConsole(e.data.text, true);
             } else if (e.data.type === "frame") {
                 const fb = new Uint32Array(e.data.framebuffer);
+                
                 const imgData = new Uint8Array(fb.length * 4);
 
                 for (let i = 0; i < fb.length; i++) {
                     let pixel = fb[i];
+                    let offset = i * 4;
+                    imgData[offset] = (pixel >> 16) & 0xff;
+                    imgData[offset + 1] = (pixel >> 8) & 0xff;
+                    imgData[offset + 2] = pixel & 0xff;
+                    imgData[offset + 3] = 0xff;
+                }
+
+                const resolutionLocation = gl.getUniformLocation(
+                    program,
+                    "u_resolution",
+                );
+                const height = gl.canvas.height;
+                const width = gl.canvas.width;
+                gl.uniform2f(resolutionLocation, width, height);
+
+                const crtEnabledLocation = gl.getUniformLocation(
+                    program,
+                    "u_crtEnabled",
+                );
+                gl.uniform1i(crtEnabledLocation, $emulatorSettings.scanlines ? 1 : 0);
+
+                gl.bindTexture(gl.TEXTURE_2D, texture);
+                gl.texSubImage2D(
+                    gl.TEXTURE_2D,
+                    0,
+                    0,
+                    0,
+                    320,
+                    200,
+                    gl.RGBA,
+                    gl.UNSIGNED_BYTE,
+                    imgData,
+                );
+
+                gl.useProgram(program);
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            } else if (e.data.type === "frameDiff") {   
+                const diff = new Uint32Array(e.data.diff);
+                const diffLength = diff.length;
+                let i = 0;
+                while (i < diffLength) {
+                    const runStart = diff[i];
+                    const runLength = diff[i + 1];
+                    const color = diff[i + 2];
+
+
+                    if (runStart + runLength <= frame.length) {
+                        for (let j = runStart; j < runStart + runLength; j++) {
+                            frame[j] = color;
+                        }
+                    } else {
+                        console.error(`Invalid frame update range: start=${runStart}, length=${runLength}, frameSize=${frame.length}`);
+                    }
+                    i += 3;
+                }
+                
+                const imgData = new Uint8Array(frame.length * 4);
+
+                for (let i = 0; i < frame.length; i++) {
+                    let pixel = frame[i];
                     let offset = i * 4;
                     imgData[offset] = (pixel >> 16) & 0xff;
                     imgData[offset + 1] = (pixel >> 8) & 0xff;

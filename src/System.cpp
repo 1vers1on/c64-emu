@@ -23,13 +23,6 @@ System::System() {
     cia1->setCpu(cpu);
     cia2->setCpu(cpu);
     vic->setCpu(cpu);
-
-    cpu->setCycleCallback([this]() {
-        cia1->tick();
-        cia2->tick();
-        vic->tick();
-        // sid->tick();
-    });
 }
 
 System::~System() {
