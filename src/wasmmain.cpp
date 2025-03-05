@@ -3,7 +3,7 @@
 #include <vector>
 #include <cstdint>
 #include <cstring>
-#include <System.hpp>
+#include <system.hpp>
 #include <algorithm>
 #include <cctype>
 #include <array>
@@ -129,7 +129,7 @@ extern "C" {
                 EM_ASM({
                     processOtherStuff();
                 });
-                std::cout << getClockSpeed() << std::endl;
+                // std::cout << getClockSpeed() << std::endl;
             }
 
             if (emulatorSystem.vic->needsRender) {

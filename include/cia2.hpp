@@ -3,7 +3,9 @@
 #include <cstdint>
 #include <cstddef>
 #include <bus.hpp>
+#include <serial_bus.hpp>
 #include <functional>
+#include <tuple>
 
 #define PORTA 0
 #define PORTB 1
@@ -27,17 +29,18 @@ class CPU;
 
 class CIA2 {
 public:
-    CIA2(Bus* bus);
+    CIA2(Bus* bus, SerialBus* serialBus);
     ~CIA2();
 
     void write(uint16_t addr, uint8_t data);
     uint8_t read(uint16_t addr);
 
     void setCpu(CPU *cpu) { this->cpu = cpu; }
-    void setIECBusCallback(std::function<void(bool, bool, bool)> callback) { iecBusCallback = callback; }
-    void IECBusWrite(bool clock, bool data);
 
     void tick();
+
+    void setDataSerial(bool dataIn);
+    void setClockSerial(bool clockIn);
 
 private:
     void triggerNMI(uint8_t interruptType);
@@ -60,6 +63,7 @@ private:
     size_t lastCycle;
     CPU *cpu;
     Bus *bus;
+    SerialBus* serialBus;
     uint8_t registers[0x10];
     // uint8_t portA;
     // uint8_t portB;
@@ -80,4 +84,5 @@ private:
     bool clockIn;
     bool dataIn;
     std::function<void(bool, bool, bool)> iecBusCallback;
+    std::function<std::pair<bool, bool>()> iecBusReadCallback;
 };

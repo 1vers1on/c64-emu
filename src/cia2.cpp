@@ -1,12 +1,18 @@
+#include <serial_bus.hpp>
 #include <cia2.hpp>
 #include <cpu.hpp>
+#include <cstdint>
 #include <iostream>
+#include <bitset>
+#
 
-CIA2::CIA2(Bus* bus) {
+CIA2::CIA2(Bus* bus, SerialBus* serial) {
     this->bus = bus;
     for (int i = 0; i < 0x10; i++) {
         registers[i] = 0x00;
     }
+
+    this->serialBus = serial;
 }
 
 CIA2::~CIA2() {
@@ -20,19 +26,29 @@ inline uint8_t decimalToBCD(uint8_t decimal) {
     return ((decimal / 10) << 4) | (decimal % 10);
 }
 
-void CIA2::IECBusWrite(bool clock, bool data) {
-    clockIn = clock;
-    dataIn = data;
+void CIA2::setDataSerial(bool dataIn) {
+    uint8_t serialData = registers[PORTA] & 0b11000111;
+    serialData |= (dataIn << 4);
+    registers[PORTA] = serialData;
+}
+
+void CIA2::setClockSerial(bool clockIn) {
+    uint8_t serialData = registers[PORTA] & 0b11000111;
+    serialData |= (clockIn << 3);
+    registers[PORTA] = serialData;
 }
 
 void CIA2::write(uint16_t addr, uint8_t data) {
     std::cout << "CIA2 write to address: " << std::hex << addr 
-              << " with data: " << static_cast<int>(data) << std::dec << std::endl;
+              << " with data: " << std::bitset<8>(data) << std::dec << std::endl;
     addr &= 0x0F;
+    uint8_t oldRegister = registers[addr];
+    registers[addr] = data;
     switch (addr) {
         case PORTA: {
             // set bank address based on lower 2 bits of previous port a value
             switch (registers[PORTA] & 0b11) {
+
                 case 0b11:
                     bus->vic->bankAddress = 0x0000;
                     break;
@@ -46,20 +62,17 @@ void CIA2::write(uint16_t addr, uint8_t data) {
                     bus->vic->bankAddress = 0xC000;
                     break;
             }
-
-            uint8_t oldSerial = (registers[PORTA] & 0b11000111) >> 3;
-            uint8_t serial    = (registers[PORTA] & 0b11000111) >> 3;
-            if (iecBusCallback) {
-                if ((oldSerial & 0b00000001) != (data & 0b00000001))
-                    iecBusCallback(serial & 0b00000001, serial & 0b00000010, serial & 0b00000100);
-                if ((oldSerial & 0b00000010) != (data & 0b00000010))
-                    iecBusCallback(serial & 0b00000001, serial & 0b00000010, serial & 0b00000100);
-                if ((oldSerial & 0b00000100) != (data & 0b00000100))
-                    iecBusCallback(serial & 0b00000001, serial & 0b00000010, serial & 0b00000100);
-            }
-
-            if ((oldSerial & 0b11000000) != (data & 0b11000000))
-                return;
+            // print it as a bitset
+            std::cout << "Port A: " << std::bitset<8>(registers[PORTA]) << std::endl;
+            uint8_t serialData = (registers[PORTA] & ~0b11000111);
+            serialData &= registers[DIRECTION_REGISTER_A];
+            serialData |= (oldRegister & ~registers[DIRECTION_REGISTER_A]);
+            serialData >>= 3;
+            bool atnFlagOut = serialData & 0x01;
+            bool clockFlagOut = serialData & 0x02;
+            bool dataFlagOut = serialData & 0x04;
+            std::cout << "ATN: " << atnFlagOut << " CLK: " << clockFlagOut << " DATA: " << dataFlagOut << std::endl;
+            serialBus->CIAWrite({dataFlagOut, clockFlagOut, atnFlagOut});
             break;
         }
         case TIMER_A_LOW:
@@ -97,15 +110,148 @@ void CIA2::write(uint16_t addr, uint8_t data) {
         default:
             break;
     }
-    registers[addr] = data;
 }
 
+
+
+// WASM Module Loaded
+// Starting emulator...
+// Starting emulator
+// 1
+// CIA2 write to address: dd0d with data: 7f
+// CIA2 write to address: dd0e with data: 8
+// CIA2 write to address: dd0f with data: 8
+// CIA2 write to address: dd03 with data: 0
+// SID write to address: 18 with data: 0
+// CIA2 write to address: dd00 with data: 7
+// IEC Bus write: 0 0 0
+// IEC Bus write: 0 0 0
+// IEC Bus write: 0 0 0
+// CIA2 write to address: dd02 with data: 3f
+// CIA2 write to address: dd00 with data: 17
+// IEC Bus write: 0 0 0
+// IEC Bus write: 0 0 0
+// IEC Bus write: 0 0 0
+// 208862
+// 226590
+// 226043
+// 226928
+// Attempted to write to ROM
+// Attempted to write to ROM
+// Attempted to write to ROM
+// Attempted to write to ROM
+// Attempted to write to ROM
+// Attempted to write to ROM
+// Attempted to write to ROM
+// Attempted to write to ROM
+// Attempted to write to ROM
+// Attempted to write to ROM
+// Attempted to write to ROM
+// Attempted to write to ROM
+// Attempted to write to ROM
+// Attempted to write to ROM
+// Attempted to write to ROM
+// Attempted to write to ROM
+// Attempted to write to ROM
+// Attempted to write to ROM
+// Attempted to write to ROM
+// Attempted to write to ROM
+// Attempted to write to ROM
+// Attempted to write to ROM
+// Attempted to write to ROM
+// Attempted to write to ROM
+// Attempted to write to ROM
+// Attempted to write to ROM
+// Attempted to write to ROM
+// Attempted to write to ROM
+// Attempted to write to ROM
+// Attempted to write to ROM
+// Attempted to write to ROM
+// Attempted to write to ROM
+// Attempted to write to ROM
+// 228112
+// CIA2 write to address: dd00 with data: 17
+// IEC Bus write: 0 0 0
+// IEC Bus write: 0 0 0
+// IEC Bus write: 0 0 0
+// 173561
+// 224231
+// 213299
+// 206875
+// 218665
+// 209975
+// 198810
+// 214081
+// 216113
+// 212499
+// 221134
+// 223049
+// 215354
+// 216620
+// 218782
+// 218157
+// 216163
+// 215928
+// 211712
+// 222560
+// 218185
+// 217508
+// 222226
+// 214701
+// 214813
+// 214409
+// 217540
+// 214571
+// 215410
+// 217530
+// 216533
+// 207913
+// 200749
+// 209746
+// 213070
+// 218192
+// 209062
+// 215021
+// 208597
+// CIA2 write to address: dd00 with data: 7
+// IEC Bus write: 0 0 0
+// IEC Bus write: 0 0 0
+// IEC Bus write: 0 0 0
+// CIA2 write to address: dd00 with data: f
+// IEC Bus write: 0 0 0
+// IEC Bus write: 0 0 0
+// IEC Bus write: 0 0 0
+// CIA2 write to address: dd00 with data: 17
+// IEC Bus write: 0 0 0
+// IEC Bus write: 0 0 0
+// IEC Bus write: 0 0 0
+// CIA2 write to address: dd00 with data: 7
+// IEC Bus write: 0 0 0
+// IEC Bus write: 0 0 0
+// IEC Bus write: 0 0 0
+// CIA2 write to address: dd00 with data: 7
+// IEC Bus write: 0 0 0
+// IEC Bus write: 0 0 0
+// IEC Bus write: 0 0 0
+// CIA2 write to address: dd00 with data: 7
+// IEC Bus write: 0 0 0
+// IEC Bus write: 0 0 0
+// IEC Bus write: 0 0 0
+
 uint8_t CIA2::read(uint16_t addr) {
-    std::cout << "CIA2 read from address: " << std::hex << addr << std::dec << std::endl;
     addr &= 0x0F;
+    std::cout << "CIA2 read from address: " << std::hex << addr << std::dec << std::endl;
+
     switch (addr) {
-        case PORTA:
-            return (registers[PORTA] & 0b00111111) | (clockIn << 6) | (dataIn << 7);
+        case PORTA: {
+            uint8_t out = registers[PORTA];
+            out &= 0b00111111;
+            SerialPortState serialState = serialBus->CIARead();
+            out |= (serialState.clockLine << 6) | (serialState.dataLine << 7);
+
+            return out;
+        }
+            
         case TIMER_A_LOW:
             return timerA & 0xFF;
         case TIMER_A_HIGH:

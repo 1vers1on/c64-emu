@@ -1463,6 +1463,7 @@ void CPU::executeOnce() {
     currentOpcode = opcode;
     auto [instruction, addressingMode, name] = instructions[opcode];
     currentInstruction = name;
+    // std::cout << "Executing " << name << " at " << std::hex << PC - 1 << std::dec << std::endl;
     instruction(this, addressingMode);
 }
 

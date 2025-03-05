@@ -99,7 +99,10 @@ void Bus::loadCartridge(const char *filename) {
                 std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)packet.data[i] << " ";
             }
             std::cout << std::dec << std::endl;
-            writeBytes(packet.loadAddress, packet.data, packet.dataLength);
+            // write the header manually
+            // write CBM80
+            
+            // writeBytes(packet.loadAddress, packet.data, packet.dataLength);
         }
     }
 
@@ -112,7 +115,7 @@ void Bus::write(uint16_t addr, uint8_t data) {
 
     if (addr >= 0x8000 && addr <= 0x9FFF) {
         if (cartridgeLoaded) {
-            std::cerr << "Attempted to write to cartridge ROM" << std::endl;
+            // std::cerr << "Attempted to write to cartridge ROM" << std::endl;
             return;
         }
     }
@@ -126,21 +129,21 @@ void Bus::write(uint16_t addr, uint8_t data) {
         if ((dataRegister & 0b011) == 0b01 || (dataRegister & 0b011) == 0b10) {
             ram[addr] = data;
         } else {
-            std::cerr << "Attempted to write to ROM" << std::endl;
+            // std::cerr << "Attempted to write to ROM" << std::endl;
         } 
     }
     if (addr >= 0xE000 && addr <= 0xFFFF) {
         if ((dataRegister & 0b011) == 0b01) {
             ram[addr] = data;
         } else {
-            std::cerr << "Attempted to write to ROM" << std::endl;
+            // std::cerr << "Attempted to write to ROM" << std::endl;
         }
     }
     if (addr >= 0xD000 && addr <= 0xDFFF) {
         if ((dataRegister & 0b100) == 0b100) {
             handleIoWrite(addr, data);
         } else {
-            std::cerr << "Attempted to write to ROM" << std::endl;
+            // std::cerr << "Attempted to write to ROM" << std::endl;
         }
     }
     ram[addr] = data;

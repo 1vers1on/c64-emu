@@ -17,13 +17,13 @@
     }
 
     let outputElement: HTMLDivElement = $state();
-    run(() => {
-        if (outputElement && $consoleOutput) {
-            setTimeout(() => {
-                outputElement.scrollTop = outputElement.scrollHeight;
-            }, 0);
-        }
-    });
+    // run(() => {
+    //     if (outputElement && $consoleOutput) {
+    //         setTimeout(() => {
+    //             outputElement.scrollTop = outputElement.scrollHeight;
+    //         }, 0);
+    //     }
+    // });
 
     onMount(() => {
     });

@@ -49,6 +49,9 @@ private:
     uint8_t singleHours;
     uint8_t tensHours;
     bool PM;
+
+    uint8_t serialShiftRegister;
+
     
     uint16_t timerA;
     uint16_t timerAReload;

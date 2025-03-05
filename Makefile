@@ -1,5 +1,5 @@
-CC := gcc
-CXX := g++
+CC := clang
+CXX := clang++
 AS := nasm
 TARGET ?= main
 BUILD_TYPE ?= debug

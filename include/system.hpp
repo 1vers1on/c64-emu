@@ -7,6 +7,7 @@
 #include <vic.hpp>
 #include <sid.hpp>
 #include <input.hpp>
+#include <serial_bus.hpp>
 
 class System {
 public:
@@ -29,4 +30,5 @@ public:
     VIC* vic;
     SID* sid;
     Input* input;
+    SerialBus* serialBus;
 };

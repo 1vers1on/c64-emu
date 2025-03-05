@@ -1,16 +1,13 @@
-#include <System.hpp>
+#include <system.hpp>
 #include <chrono>
+#include <floppy.hpp>
 
 System::System() {
-    // bus = new Bus();
-    // bus->cia1->setCpu(this);
-    // bus->cia2->setCpu(this);
-    // bus->vic->setCpu(this);
-
     bus = new Bus();
+    serialBus = new SerialBus();
     cpu = new CPU(bus);
     cia1 = new CIA1(bus);
-    cia2 = new CIA2(bus);
+    cia2 = new CIA2(bus, serialBus);
     vic = new VIC(bus);
     sid = new SID();
     input = new Input();
@@ -23,6 +20,9 @@ System::System() {
     cia1->setCpu(cpu);
     cia2->setCpu(cpu);
     vic->setCpu(cpu);
+
+    Floppy* floppy = new Floppy(serialBus);
+    serialBus->devices.push_back(floppy);
 }
 
 System::~System() {
@@ -50,7 +50,7 @@ void System::reset() {
 static auto lastTime = std::chrono::high_resolution_clock::now();
 static std::chrono::duration<double> accumulatedTime(0);
 static int tickCount = 0;
-const std::chrono::duration<double> timeThreshold(0.4); // 0.5 seconds
+const std::chrono::duration<double> timeThreshold(0.4);
 
 void System::step() {
     auto now = std::chrono::high_resolution_clock::now();
@@ -69,4 +69,3 @@ void System::step() {
 
     cpu->executeOnce();
 }
-
