@@ -1643,9 +1643,11 @@ void CPU::pushWord(uint16_t data) {
 void CPU::stepCycles(size_t cycles) {
     this->cycles += cycles;
     for(size_t i = 0; i < cycles; i++) {
-        // bus->cia1->tick();
-        // bus->cia2->tick();
-        // bus->vic->tick();
+        #ifndef NO_MMIO
+        bus->cia1->tick();
+        bus->cia2->tick();
+        bus->vic->tick();
+        #endif
     }
 }
 
