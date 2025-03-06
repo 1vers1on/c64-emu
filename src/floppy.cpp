@@ -1,9 +1,9 @@
+#include <bitset>
 #include <floppy.hpp>
 #include <iostream>
-#include <bitset>
 
 Floppy::Floppy(SerialBus* bus) : SerialDevice(bus) {
-    startTime = std::chrono::high_resolution_clock::now();  
+    startTime = std::chrono::high_resolution_clock::now();
 
     state = {true, false, false};
 }
@@ -15,7 +15,7 @@ SerialPortState Floppy::getIndividualState() {
 void Floppy::shiftBit(bool bit) {
     shiftRegister = (shiftRegister << 1) | bit;
     bitTransfered++;
-    if (bitTransfered == 8) {
+    if(bitTransfered == 8) {
         byteTransferComplete = true;
         byteTransferInitiated = false;
     }
@@ -24,27 +24,27 @@ void Floppy::shiftBit(bool bit) {
 void Floppy::tick() {
     // make sure 1 second has passed before we do anything
     auto currentTime = std::chrono::high_resolution_clock::now();
-    if (std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime).count() < 5) {
+    if(std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime).count() < 5) {
         return;
     }
-    if (!byteTransferInitiated) {
+    if(!byteTransferInitiated) {
         state.dataLine = true;
         state.clockLine = false;
     }
 
-    if (!byteTransferInitiated && !byteTransferComplete && !bus->Read(false).clockLine) {
+    if(!byteTransferInitiated && !byteTransferComplete && !bus->Read(false).clockLine) {
         byteTransferInitiated = true;
         shiftRegister = 0;
         bitTransfered = 0;
         state.dataLine = false;
     }
 
-    if (byteTransferInitiated && !byteTransferComplete && !bus->Read(false).clockLine) {
+    if(byteTransferInitiated && !byteTransferComplete && !bus->Read(false).clockLine) {
         shiftBit(bus->Read(false).dataLine);
         std::cout << "Floppy shift register: " << std::bitset<8>(shiftRegister) << std::endl;
     }
 
-    if (byteTransferComplete) {
+    if(byteTransferComplete) {
         state.dataLine = true;
         byteTransferComplete = false;
         byteTransferInitiated = false;

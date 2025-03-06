@@ -1,6 +1,6 @@
-#include <system.hpp>
 #include <chrono>
 #include <floppy.hpp>
+#include <system.hpp>
 
 System::System() {
     bus = new Bus();
@@ -60,7 +60,7 @@ void System::step() {
     accumulatedTime += delta;
     tickCount++;
 
-    if (accumulatedTime >= timeThreshold) {
+    if(accumulatedTime >= timeThreshold) {
         double averageClockSpeed = tickCount / accumulatedTime.count();
         clockSpeed = static_cast<int>(averageClockSpeed);
         accumulatedTime = std::chrono::duration<double>::zero();

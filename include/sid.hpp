@@ -2,7 +2,7 @@
 
 #include <cstdint>
 #include <vector>
-#include <ASDREnvelope.hpp>
+// #include <ASDREnvelope.hpp>
 
 #define nsPerCycle 1015 // for pal systems
 #define CLOCK_SPEED 985000
@@ -27,7 +27,7 @@ struct Voice {
     float phase;
     float amplitude;
     float msSinceStarted;
-    ADSREnvelope* envelope;
+    // ADSREnvelope* envelope;
 };
 
 struct Filter {

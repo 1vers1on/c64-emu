@@ -666,7 +666,6 @@
                 link.href = url;
                 link.download = "commodore64-state.bin";
                 link.click();
-                // document.body.removeChild(link);
                 link.remove();
                 URL.revokeObjectURL(url);
             }
@@ -781,9 +780,9 @@
             bind:this={textInput}
         />
 
-        <!-- <span class="clock-speed">
+        <span class="clock-speed">
             Clock Speed: {clockSpeed} Hz
-        </span> -->
+        </span>
     </div>
 </div>
 

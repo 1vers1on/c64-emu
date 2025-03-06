@@ -10,30 +10,30 @@ SerialBus::~SerialBus() {
 
 void SerialBus::CIAWrite(SerialPortState data) {
     ciaState = data;
-    if (!data.dataLine) {
+    if(!data.dataLine) {
         state.dataLine = false;
     }
-    if (!data.clockLine) {
+    if(!data.clockLine) {
         state.clockLine = false;
     }
     state.atnLine = data.atnLine;
 
-    for (SerialDevice* device : devices) {
+    for(SerialDevice* device : devices) {
         device->tick();
     }
 }
 
 SerialPortState SerialBus::Read(bool tick) {
     state = ciaState;
-    for (SerialDevice* device : devices) {
-        if (tick) {
+    for(SerialDevice* device : devices) {
+        if(tick) {
             device->tick();
         }
         SerialPortState deviceState = device->getIndividualState();
-        if (!deviceState.dataLine) {
+        if(!deviceState.dataLine) {
             state.dataLine = false;
         }
-        if (!deviceState.clockLine) {
+        if(!deviceState.clockLine) {
             state.clockLine = false;
         }
     }

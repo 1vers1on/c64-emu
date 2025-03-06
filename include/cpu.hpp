@@ -89,13 +89,12 @@ public:
     }
 
 private:
-    std::string currentInstruction;
     size_t lastCycles;
     uint8_t currentOpcode;
 
     int loops;
 
-    std::array<std::tuple<std::function<void(CPU *, AddressingMode)>, AddressingMode, std::string>, 256> instructions;
+    std::array<std::tuple<std::function<void(CPU *, AddressingMode)>, AddressingMode>, 256> instructions;
 
     std::function<void()> cycleCallback;
 

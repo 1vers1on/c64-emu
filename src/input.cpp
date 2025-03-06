@@ -1,11 +1,10 @@
-#include <input.hpp>
-
-#include <iostream>
-#include <bitset>
 #include <algorithm>
+#include <bitset>
+#include <input.hpp>
+#include <iostream>
 
 Input::Input() {
-    for (int i = 0; i < 8; i++) {
+    for(int i = 0; i < 8; i++) {
         keyMatrix[i] = 0xFF;
     }
 }
@@ -29,17 +28,17 @@ void Input::setKeyPressed(std::string key, bool pressed) {
     // }
     // if (key == "\\") {
     //     key = "+";
-    // }   
+    // }
     // if (key == "'") {
     //     key = ":";
-    // }   
+    // }
     auto it = std::find(keys.begin(), keys.end(), key);
-    if (it == keys.end()) {
+    if(it == keys.end()) {
         std::cerr << "Key not found: " << key << std::endl;
         return;
     }
 
-    if (pressed) {
+    if(pressed) {
         pressedKeys.insert(key);
     } else {
         pressedKeys.erase(key);
@@ -71,19 +70,18 @@ uint8_t reverseBits(uint8_t n) {
 //         }
 //     }
 
-
 //     // return 0;
 //     return output;
 // }
 
 uint8_t Input::readKeyMatrix(uint8_t row) {
     uint8_t output = 0xFF;
-    for (int i = 0; i < 8; i++) {
-        if ((row & (1 << i)) == 0) {
+    for(int i = 0; i < 8; i++) {
+        if((row & (1 << i)) == 0) {
             int keysRow = 7 - i;
-            for (int col = 0; col < 8; col++) {
+            for(int col = 0; col < 8; col++) {
                 int keyIndex = keysRow * 8 + col;
-                if (pressedKeys.find(keys[keyIndex]) != pressedKeys.end()) {
+                if(pressedKeys.find(keys[keyIndex]) != pressedKeys.end()) {
                     output &= ~(1 << (7 - col));
                 }
             }
@@ -91,4 +89,3 @@ uint8_t Input::readKeyMatrix(uint8_t row) {
     }
     return output;
 }
-

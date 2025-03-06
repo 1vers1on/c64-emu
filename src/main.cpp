@@ -1,18 +1,19 @@
 // #include <SDL2/SDL_timer.h>
 #ifndef __EMSCRIPTEN__
-#include <iostream>
-#include <fstream>
-#include <sys/types.h>
 #include <cstdint>
 #include <cstring>
+#include <fstream>
+#include <iostream>
+#include <sys/types.h>
 // #include <cpu.hpp>
 #include <system.hpp>
 // #include <SDL2/SDL.h>
 #include <cctype>
 
-void write_bmp(const std::array<uint32_t, 40 * 25 * 8 * 8>& screen, const std::string& filename = "output.bmp") {
-    const int width = 40 * 8;   // 320 pixels
-    const int height = 25 * 8;  // 200 pixels
+void write_bmp(const std::array<uint32_t, 40 * 25 * 8 * 8>& screen,
+               const std::string& filename = "output.bmp") {
+    const int width = 40 * 8;    // 320 pixels
+    const int height = 25 * 8;   // 200 pixels
     const int bytesPerPixel = 4; // 32-bit
     const int rowSize = width * bytesPerPixel;
     const int imageSize = rowSize * height;
@@ -21,17 +22,17 @@ void write_bmp(const std::array<uint32_t, 40 * 25 * 8 * 8>& screen, const std::s
     const int fileSize = fileHeaderSize + infoHeaderSize + imageSize;
 
     std::ofstream ofs(filename, std::ios::binary);
-    if (!ofs) {
+    if(!ofs) {
         throw std::runtime_error("failed to open file");
     }
 
     // bmp file header (14 bytes)
     unsigned char fileHeader[fileHeaderSize] = {
-        'B', 'M',          // signature
-        0, 0, 0, 0,        // file size (will fill in below)
-        0, 0,              // reserved
-        0, 0,              // reserved
-        0, 0, 0, 0         // pixel data offset (will fill in below)
+        'B', 'M',       // signature
+        0,   0,   0, 0, // file size (will fill in below)
+        0,   0,         // reserved
+        0,   0,         // reserved
+        0,   0,   0, 0  // pixel data offset (will fill in below)
     };
 
     // fill file size (little-endian)
@@ -64,8 +65,8 @@ void write_bmp(const std::array<uint32_t, 40 * 25 * 8 * 8>& screen, const std::s
     infoHeader[7] = static_cast<unsigned char>(width >> 24);
 
     // image height
-    infoHeader[8]  = static_cast<unsigned char>(height);
-    infoHeader[9]  = static_cast<unsigned char>(height >> 8);
+    infoHeader[8] = static_cast<unsigned char>(height);
+    infoHeader[9] = static_cast<unsigned char>(height >> 8);
     infoHeader[10] = static_cast<unsigned char>(height >> 16);
     infoHeader[11] = static_cast<unsigned char>(height >> 24);
 
@@ -90,32 +91,33 @@ void write_bmp(const std::array<uint32_t, 40 * 25 * 8 * 8>& screen, const std::s
     ofs.write(reinterpret_cast<char*>(infoHeader), infoHeaderSize);
 
     // write pixel data; bmp stores rows bottom-up
-    for (int y = height - 1; y >= 0; --y) {
-        for (int x = 0; x < width; ++x) {
+    for(int y = height - 1; y >= 0; --y) {
+        for(int x = 0; x < width; ++x) {
             // assuming 'screen' is stored in row-major order (top-down)
             int index = y * width + x;
             uint32_t pixel = screen[index];
             // bmp expects pixels in bgra order (little-endian)
             unsigned char color[4];
-            color[0] = static_cast<unsigned char>(pixel & 0xFF);          // blue
-            color[1] = static_cast<unsigned char>((pixel >> 8) & 0xFF);     // green
-            color[2] = static_cast<unsigned char>((pixel >> 16) & 0xFF);    // red
-            color[3] = static_cast<unsigned char>((pixel >> 24) & 0xFF);    // alpha
+            color[0] = static_cast<unsigned char>(pixel & 0xFF);         // blue
+            color[1] = static_cast<unsigned char>((pixel >> 8) & 0xFF);  // green
+            color[2] = static_cast<unsigned char>((pixel >> 16) & 0xFF); // red
+            color[3] = static_cast<unsigned char>((pixel >> 24) & 0xFF); // alpha
             ofs.write(reinterpret_cast<char*>(color), 4);
         }
     }
     ofs.close();
 }
 
-// void render_screen(SDL_Texture* texture, SDL_Renderer* renderer, const std::array<uint32_t, 40 * 25 * 8 * 8>& screen) {
+// void render_screen(SDL_Texture* texture, SDL_Renderer* renderer, const std::array<uint32_t, 40 *
+// 25 * 8 * 8>& screen) {
 //     SDL_UpdateTexture(texture, nullptr, screen.data(), 320 * sizeof(uint32_t));
 //     SDL_RenderClear(renderer);
 //     SDL_RenderCopy(renderer, texture, nullptr, nullptr);
 //     SDL_RenderPresent(renderer);
 // }
 
-#define SAMPLE_RATE 44100  // standard audio sample rate
-#define BUFFER_SIZE 512    // number of samples per callback
+#define SAMPLE_RATE 44100 // standard audio sample rate
+#define BUFFER_SIZE 512   // number of samples per callback
 
 // // audio callback function
 // void audioCallback(void* userdata, Uint8* stream, int len) {
@@ -149,13 +151,12 @@ void write_bmp(const std::array<uint32_t, 40 * 25 * 8 * 8>& screen, const std::s
 //     SDL_PauseAudio(0);  // start playback
 // }
 
-
 int main() {
     // if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) {
     //     std::cerr << "SDL could not initialize! SDL_Error: " << SDL_GetError() << std::endl;
     //     return 1;
     // }
-    
+
     // SDL_Window *window = SDL_CreateWindow("Framebuffer Example",
     //     SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
     //     320 * 2, 200 * 2, SDL_WINDOW_SHOWN);
@@ -164,7 +165,6 @@ int main() {
     //     SDL_Quit();
     //     return 1;
     // }
-
 
     // SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
     // SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
@@ -189,7 +189,7 @@ int main() {
 
     system.powerOn();
 
-    while (running) {
+    while(running) {
         system.step();
 
         // if (system.vic->needsRender) {
@@ -220,7 +220,6 @@ int main() {
         //     SDL_Delay(20); // if you dont do this your computer will explode
         //     // std::cout << cpu.dump() << std::endl;
         // }
-
     }
     // SDL_DestroyTexture(texture);
     // SDL_DestroyRenderer(renderer);
@@ -261,33 +260,33 @@ int main() {
 //     output.reserve(input_size * 1.1);
 
 //     std::vector<uint32_t> hash_table(HASH_TABLE_SIZE, 0);
-    
+
 //     size_t ip = 0;
-    
+
 //     while (ip < input_size) {
 //         size_t token_pos = output.size();
 //         output.push_back(0);
-        
+
 //         size_t literal_start = ip;
-        
+
 //         size_t matched = 0;
 //         while (ip + MIN_MATCH <= input_size && !matched) {
 //             uint32_t h = hash(&input[ip]);
 //             size_t ref = hash_table[h];
 //             hash_table[h] = ip;
-            
+
 //             size_t distance = (ref > 0) ? ip - ref : 0;
-            
-//             if (distance > 0 && distance < MAX_DISTANCE && 
+
+//             if (distance > 0 && distance < MAX_DISTANCE &&
 //                 memcmp(&input[ref], &input[ip], MIN_MATCH) == 0) {
-                
+
 //                 size_t match_len = MIN_MATCH;
-//                 while (match_len < MAX_MATCH && 
-//                        ip + match_len < input_size && 
+//                 while (match_len < MAX_MATCH &&
+//                        ip + match_len < input_size &&
 //                        input[ref + match_len] == input[ip + match_len]) {
 //                     match_len++;
 //                 }
-                
+
 //                 size_t literal_len = ip - literal_start;
 //                 if (literal_len < 15) {
 //                     output[token_pos] = literal_len << 4;
@@ -300,9 +299,10 @@ int main() {
 //                     }
 //                     output.push_back(static_cast<uint8_t>(remain));
 //                 }
-                
-//                 output.insert(output.end(), &input[literal_start], &input[literal_start + literal_len]);
-                
+
+//                 output.insert(output.end(), &input[literal_start], &input[literal_start +
+//                 literal_len]);
+
 //                 if (match_len < 15 + MIN_MATCH) {
 //                     output[token_pos] |= (match_len - MIN_MATCH);
 //                 } else {
@@ -314,20 +314,20 @@ int main() {
 //                     }
 //                     output.push_back(static_cast<uint8_t>(remain));
 //                 }
-                
+
 //                 output.push_back(distance & 0xFF);
 //                 output.push_back((distance >> 8) & 0xFF);
-                
+
 //                 ip += match_len;
 //                 matched = 1;
 //             } else {
 //                 ip++;
 //             }
 //         }
-        
+
 //         if (!matched) {
 //             size_t literal_len = input_size - literal_start;
-            
+
 //             if (literal_len < 15) {
 //                 output[token_pos] = literal_len << 4;
 //             } else {
@@ -339,80 +339,81 @@ int main() {
 //                 }
 //                 output.push_back(static_cast<uint8_t>(remain));
 //             }
-            
-//             output.insert(output.end(), &input[literal_start], &input[literal_start + literal_len]);
-//             ip = input_size;
+
+//             output.insert(output.end(), &input[literal_start], &input[literal_start +
+//             literal_len]); ip = input_size;
 //         }
 //     }
-    
+
 //     return output;
 // }
 
-// std::vector<uint8_t> decompress(const uint8_t* input, size_t input_size, size_t max_output_size) {
+// std::vector<uint8_t> decompress(const uint8_t* input, size_t input_size, size_t max_output_size)
+// {
 //     std::vector<uint8_t> output;
 //     output.reserve(max_output_size);
-    
+
 //     size_t ip = 0;
-    
+
 //     while (ip < input_size) {
 //         if (ip >= input_size) break;
 //         uint8_t token = input[ip++];
-        
+
 //         size_t literal_len = token >> 4;
 //         if (literal_len == 15) {
 //             uint8_t extra_len;
 //             do {
-//                 if (ip >= input_size) 
+//                 if (ip >= input_size)
 //                     throw std::runtime_error("Unexpected end of input");
-                    
+
 //                 extra_len = input[ip++];
 //                 literal_len += extra_len;
 //             } while (extra_len == 255 && ip < input_size);
 //         }
-        
+
 //         if (ip + literal_len > input_size) {
 //             throw std::runtime_error("Literal length exceeds input buffer");
 //         }
-        
+
 //         output.insert(output.end(), &input[ip], &input[ip + literal_len]);
 //         ip += literal_len;
-        
+
 //         if (ip >= input_size) break;
-        
+
 //         if (ip + 2 > input_size) {
 //             throw std::runtime_error("Unexpected end of input");
 //         }
-        
+
 //         uint16_t offset = input[ip] | (input[ip + 1] << 8);
 //         ip += 2;
-        
+
 //         if (offset == 0 || offset > output.size()) {
-//             throw std::runtime_error("Invalid match offset: " + std::to_string(offset) + 
+//             throw std::runtime_error("Invalid match offset: " + std::to_string(offset) +
 //                                      ", output size: " + std::to_string(output.size()));
 //         }
-        
+
 //         size_t match_len = (token & 0x0F) + MIN_MATCH;
 //         if (match_len == 15 + MIN_MATCH) {
 //             uint8_t extra_len;
 //             do {
-//                 if (ip >= input_size) 
+//                 if (ip >= input_size)
 //                     throw std::runtime_error("Unexpected end of input");
-                    
+
 //                 extra_len = input[ip++];
 //                 match_len += extra_len;
 //             } while (extra_len == 255 && ip < input_size);
 //         }
-        
+
 //         size_t match_pos = output.size() - offset;
 //         if (output.size() + match_len > max_output_size) {
 //             throw std::runtime_error("Decompressed data exceeds max output size");
 //         }
-        
+
 //         for (size_t i = 0; i < match_len; i++) {
 //             output.push_back(output[match_pos + i]);
 //         }
 //     }
-    
+
 //     return output;
 // }
 
@@ -439,7 +440,8 @@ int main() {
 
 // int main() {
 //     std::string message = "This is a test message for LZ4 compression. "
-//                          "It contains repeated patterns like this this this to demonstrate compression.";
+//                          "It contains repeated patterns like this this this to demonstrate
+//                          compression.";
 
 //     auto compressed = lz4::compress(message);
 //     std::cout << "Compressed size: " << compressed.size() << " bytes\n";
@@ -468,8 +470,8 @@ int main() {
 //     auto end = std::chrono::high_resolution_clock::now();
 //     std::chrono::duration<double> elapsed = end - start;
 //     std::cout << "Elapsed time: " << elapsed.count() << " seconds\n";
-//     std::cout << "Compression speed: " << (100000.0 / elapsed.count()) << " compressions per second\n";
-    
+//     std::cout << "Compression speed: " << (100000.0 / elapsed.count()) << " compressions per
+//     second\n";
 
 //     return 0;
 // }

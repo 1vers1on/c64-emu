@@ -15,7 +15,6 @@ EMCXX := em++ # use emscripten c++ compiler
 WASM_CFLAGS := -sWASM=1 -s EXPORTED_FUNCTIONS="['_startEmulator','_getFramebuffer','_keyDown','_keyUp','_getClockSpeed','_writeToMemory','_readFromMemory','_reset','_paused','_resume','_getMemory','_getDiffSize','_getDiff']" -sMODULARIZE -sEXPORT_ES6 --no-entry -s EXPORTED_RUNTIME_METHODS="['ccall','cwrap']" -O3 -flto -sASYNCIFY
 WASM_LDFLAGS := -sALLOW_MEMORY_GROWTH=1 -sENVIRONMENT=web --no-entry -flto -O3
 
-
 ifeq ($(BUILD_TYPE), debug)
 CFLAGS += -O0 -DDEBUG
 CXXFLAGS += -O0 -DDEBUG
@@ -33,7 +32,7 @@ ASM_OBJ := $(patsubst $(SRC_DIR)/%.asm,$(BIN_DIR)/%.o,$(ASM_SRC))
 OBJ := $(CPP_OBJ) $(C_OBJ) $(ASM_OBJ)
 DEP := $(OBJ:.o=.d)
 
-all: $(TARGET)
+all: format $(TARGET)
 
 $(TARGET): $(OBJ)
 	@mkdir -p $(BIN_DIR)
@@ -64,6 +63,9 @@ $(BIN_DIR)/%.o: $(SRC_DIR)/%.asm
 clean:
 	rm -rf $(BIN_DIR) $(TARGET)
 
+format:
+	clang-format -i $(CPP_SRC) $(C_SRC)
+
 help:
 	@echo "Available targets:"
 	@echo "  all       - Build the project (default)"
@@ -71,8 +73,9 @@ help:
 	@echo "  lib       - Build a static library"
 	@echo "  shared    - Build a shared library"
 	@echo "  wasm      - Compile to WebAssembly"
+	@echo "  format    - Format source code"
 	@echo "  help      - Show this help message"
 
 -include $(DEP)
 
-.PHONY: all clean lib shared wasm help
+.PHONY: all clean lib shared wasm help format
