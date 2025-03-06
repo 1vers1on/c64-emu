@@ -1,8 +1,8 @@
 #include <serial_bus.hpp>
 
 SerialBus::SerialBus() {
-    state = {true, true, true};
-    ciaState = {true, true, true};
+    state = {false, false, true};
+    ciaState = {false, false, true};
 }
 
 SerialBus::~SerialBus() {
@@ -23,10 +23,12 @@ void SerialBus::CIAWrite(SerialPortState data) {
     }
 }
 
-SerialPortState SerialBus::CIARead() {
+SerialPortState SerialBus::Read(bool tick) {
     state = ciaState;
     for (SerialDevice* device : devices) {
-        device->tick();
+        if (tick) {
+            device->tick();
+        }
         SerialPortState deviceState = device->getIndividualState();
         if (!deviceState.dataLine) {
             state.dataLine = false;

@@ -19,7 +19,7 @@ public:
     ~SerialBus();
 
     void CIAWrite(SerialPortState data);
-    SerialPortState CIARead();
+    SerialPortState Read(bool tick = true);
 
     std::vector<SerialDevice*> devices;
 

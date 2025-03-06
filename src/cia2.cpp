@@ -246,7 +246,7 @@ uint8_t CIA2::read(uint16_t addr) {
         case PORTA: {
             uint8_t out = registers[PORTA];
             out &= 0b00111111;
-            SerialPortState serialState = serialBus->CIARead();
+            SerialPortState serialState = serialBus->Read();
             out |= (serialState.clockLine << 6) | (serialState.dataLine << 7);
 
             return out;

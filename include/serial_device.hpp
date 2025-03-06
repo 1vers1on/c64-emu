@@ -6,7 +6,6 @@ class SerialBus;
 class SerialDevice {
 public:
     SerialDevice(SerialBus* bus) : bus(bus) {}
-    ~SerialDevice();
 
     virtual SerialPortState getIndividualState() = 0;
 
