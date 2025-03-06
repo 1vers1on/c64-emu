@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cstring>
 #include <emscripten.h>
+#include <iostream>
 #include <sys/types.h>
 #include <system.hpp>
 #include <thread>

@@ -113,6 +113,7 @@ void Bus::loadCartridge(const char* filename) {
 }
 
 void Bus::write(uint16_t addr, uint8_t data) {
+#ifndef NO_MMIO
     if(addr == 0x0000) dataDirectionRegister = data;
     if(addr == 0x0001) dataRegister = data;
 
@@ -149,10 +150,12 @@ void Bus::write(uint16_t addr, uint8_t data) {
             // std::cerr << "Attempted to write to ROM" << std::endl;
         }
     }
+#endif
     ram[addr] = data;
 }
 
 uint8_t Bus::read(uint16_t addr) {
+#ifndef NO_MMIO
     if(addr == 0x0000) return dataDirectionRegister;
     if(addr == 0x0001) return dataRegister;
 
@@ -187,6 +190,7 @@ uint8_t Bus::read(uint16_t addr) {
             return charRom[addr - 0xD000];
         }
     }
+#endif
     return ram[addr];
 }
 

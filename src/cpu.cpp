@@ -5,6 +5,62 @@
 #include <stdexcept>
 #include <sys/types.h>
 
+static const std::array<std::string, 256> instructionNames = {
+    "BRK", "ORA", "KIL", "SLO", "DOP", "ORA", "ASL", "SLO", "PHP", "ORA", "ASL", "AAC", "TOP",
+    "ORA", "ASL", "SLO", "BPL", "ORA", "KIL", "SLO", "DOP", "ORA", "ASL", "SLO", "CLC", "ORA",
+    "NOP", "SLO", "TOP", "ORA", "ASL", "SLO", "JSR", "AND", "KIL", "RLA", "BIT", "AND", "ROL",
+    "RLA", "PLP", "AND", "ROL", "AAC", "BIT", "AND", "ROL", "RLA", "BMI", "AND", "KIL", "RLA",
+    "DOP", "AND", "ROL", "RLA", "SEC", "AND", "NOP", "RLA", "TOP", "AND", "ROL", "RLA", "RTI",
+    "EOR", "KIL", "SRE", "DOP", "EOR", "LSR", "SRE", "PHA", "EOR", "LSR", "ASR", "JMP", "EOR",
+    "LSR", "SRE", "BVC", "EOR", "KIL", "SRE", "DOP", "EOR", "LSR", "SRE", "CLI", "EOR", "NOP",
+    "SRE", "TOP", "EOR", "LSR", "SRE", "RTS", "ADC", "KIL", "RRA", "DOP", "ADC", "ROR", "RRA",
+    "PLA", "ADC", "ROR", "ARR", "JMP", "ADC", "ROR", "RRA", "BVS", "ADC", "KIL", "RRA", "DOP",
+    "ADC", "ROR", "RRA", "SEI", "ADC", "NOP", "RRA", "TOP", "ADC", "ROR", "RRA", "DOP", "STA",
+    "DOP", "AAX", "STY", "STA", "STX", "AAX", "DEY", "DOP", "TXA", "XAA", "STY", "STA", "STX",
+    "AAX", "BCC", "STA", "KIL", "AXA", "STY", "STA", "STX", "AAX", "TYA", "STA", "TXS", "XAS",
+    "SYA", "STA", "SXA", "AXA", "LDY", "LDA", "LDX", "LAX", "LDY", "LDA", "LDX", "LAX", "TAY",
+    "LDA", "TAX", "ATX", "LDY", "LDA", "LDX", "LAX", "BCS", "LDA", "KIL", "LAX", "LDY", "LDA",
+    "LDX", "LAX", "CLV", "LDA", "TSX", "LAR", "LDY", "LDA", "LDX", "LAX", "CPY", "CMP", "DOP",
+    "DCP", "CPY", "CMP", "DEC", "DCP", "INY", "CMP", "DEX", "AXS", "CPY", "CMP", "DEC", "DCP",
+    "BNE", "CMP", "KIL", "DCP", "DOP", "CMP", "DEC", "DCP", "CLD", "CMP", "NOP", "DCP", "TOP",
+    "CMP", "DEC", "DCP", "CPX", "SBC", "DOP", "ISC", "CPX", "SBC", "INC", "ISC", "INX", "SBC",
+    "NOP", "SBC", "CPX", "SBC", "INC", "ISC", "BEQ", "SBC", "KIL", "ISC", "DOP", "SBC", "INC",
+    "ISC", "SED", "SBC", "NOP", "ISC", "TOP", "SBC", "INC", "ISC",
+};
+
+static std::string AddressingModeName(AddressingMode mode) {
+    switch(mode) {
+    case AddressingMode::IMMEDIATE:
+        return "IMMEDIATE";
+    case AddressingMode::ZERO_PAGE:
+        return "ZERO_PAGE";
+    case AddressingMode::ZERO_PAGE_X:
+        return "ZERO_PAGE_X";
+    case AddressingMode::ZERO_PAGE_Y:
+        return "ZERO_PAGE_Y";
+    case AddressingMode::ABSOLUTE:
+        return "ABSOLUTE";
+    case AddressingMode::ABSOLUTE_X:
+        return "ABSOLUTE_X";
+    case AddressingMode::ABSOLUTE_Y:
+        return "ABSOLUTE_Y";
+    case AddressingMode::INDIRECT:
+        return "INDIRECT";
+    case AddressingMode::INDIRECT_X:
+        return "INDIRECT_X";
+    case AddressingMode::INDIRECT_Y:
+        return "INDIRECT_Y";
+    case AddressingMode::ACCUMULATOR:
+        return "ACCUMULATOR";
+    case AddressingMode::RELATIVE:
+        return "RELATIVE";
+    case AddressingMode::IMPLIED:
+        return "IMPLIED";
+    }
+
+    return "UNKNOWN";
+}
+
 static void unkownInstruction(CPU* cpu, AddressingMode mode) {
     std::cout << "opcode: " << std::hex << static_cast<int>(cpu->getCurrentOpcode()) << std::dec
               << "\n";
@@ -57,8 +113,7 @@ static void LDY(CPU* cpu, AddressingMode mode) {
     cpu->stepCycles(1);
 }
 
-static void STX(CPU* cpu, AddressingMode mode) { // this fucks up the cycles dont know why but i
-                                                 // think my known good logs are wrong.
+static void STX(CPU* cpu, AddressingMode mode) {
     uint16_t address = cpu->getAddress(mode);
     cpu->bus->write(address, cpu->X);
     cpu->stepCycles(1);
@@ -123,7 +178,7 @@ static void CLV(CPU* cpu, AddressingMode mode) {
 }
 
 static void BCS(CPU* cpu, AddressingMode mode) {
-    int8_t offset = cpu->fetch();
+    int8_t offset = cpu->bus->read(cpu->PC++);
     if(cpu->P & CARRY_FLAG) {
         cpu->stepCycles(1);
         if((cpu->PC & 0xFF00) != ((cpu->PC + offset) & 0xFF00)) {
@@ -135,7 +190,7 @@ static void BCS(CPU* cpu, AddressingMode mode) {
 }
 
 static void BCC(CPU* cpu, AddressingMode mode) {
-    int8_t offset = cpu->fetch();
+    int8_t offset = cpu->bus->read(cpu->PC++);
     if(!(cpu->P & CARRY_FLAG)) {
         cpu->stepCycles(1);
         if((cpu->PC & 0xFF00) != ((cpu->PC + offset) & 0xFF00)) {
@@ -147,7 +202,7 @@ static void BCC(CPU* cpu, AddressingMode mode) {
 }
 
 static void BEQ(CPU* cpu, AddressingMode mode) {
-    int8_t offset = cpu->fetch();
+    int8_t offset = cpu->bus->read(cpu->PC++);
     if(cpu->P & ZERO_FLAG) {
         cpu->stepCycles(1);
         if((cpu->PC & 0xFF00) != ((cpu->PC + offset) & 0xFF00)) {
@@ -159,7 +214,7 @@ static void BEQ(CPU* cpu, AddressingMode mode) {
 }
 
 static void BNE(CPU* cpu, AddressingMode mode) {
-    int8_t offset = cpu->fetch();
+    int8_t offset = cpu->bus->read(cpu->PC++);
     if(!(cpu->P & ZERO_FLAG)) {
         cpu->stepCycles(1);
         if((cpu->PC & 0xFF00) != ((cpu->PC + offset) & 0xFF00)) {
@@ -171,7 +226,7 @@ static void BNE(CPU* cpu, AddressingMode mode) {
 }
 
 static void BVS(CPU* cpu, AddressingMode mode) {
-    int8_t offset = cpu->fetch();
+    int8_t offset = cpu->bus->read(cpu->PC++);
     if(cpu->P & OVERFLOW_FLAG) {
         cpu->stepCycles(1);
         if((cpu->PC & 0xFF00) != ((cpu->PC + offset) & 0xFF00)) {
@@ -183,7 +238,7 @@ static void BVS(CPU* cpu, AddressingMode mode) {
 }
 
 static void BVC(CPU* cpu, AddressingMode mode) {
-    int8_t offset = cpu->fetch();
+    int8_t offset = cpu->bus->read(cpu->PC++);
     if(!(cpu->P & OVERFLOW_FLAG)) {
         cpu->stepCycles(1);
         if((cpu->PC & 0xFF00) != ((cpu->PC + offset) & 0xFF00)) {
@@ -195,7 +250,7 @@ static void BVC(CPU* cpu, AddressingMode mode) {
 }
 
 static void BPL(CPU* cpu, AddressingMode mode) {
-    int8_t offset = cpu->fetch();
+    int8_t offset = cpu->bus->read(cpu->PC++);
     if(!(cpu->P & NEGATIVE_FLAG)) {
         cpu->stepCycles(1);
         if((cpu->PC & 0xFF00) != ((cpu->PC + offset) & 0xFF00)) {
@@ -207,7 +262,7 @@ static void BPL(CPU* cpu, AddressingMode mode) {
 }
 
 static void BMI(CPU* cpu, AddressingMode mode) {
-    int8_t offset = cpu->fetch();
+    int8_t offset = cpu->bus->read(cpu->PC++);
     if(cpu->P & NEGATIVE_FLAG) {
         cpu->stepCycles(1);
         if((cpu->PC & 0xFF00) != ((cpu->PC + offset) & 0xFF00)) {
@@ -244,17 +299,17 @@ static void BIT(CPU* cpu, AddressingMode mode) {
 
 static void PHP(CPU* cpu, AddressingMode mode) {
     cpu->pushByte(cpu->P | BREAK_FLAG | UNUSED_FLAG);
-    cpu->stepCycles(1);
+    cpu->stepCycles(2);
 }
 
 static void PLP(CPU* cpu, AddressingMode mode) {
     cpu->P = (cpu->popByte() & 0xEF) | (cpu->P & 0x10) | 0x20;
-    cpu->stepCycles(1);
+    cpu->stepCycles(2);
 }
 
 static void PHA(CPU* cpu, AddressingMode mode) {
     cpu->pushByte(cpu->A);
-    cpu->stepCycles(1);
+    cpu->stepCycles(2);
 }
 
 static void PLA(CPU* cpu, AddressingMode mode) {
@@ -1452,10 +1507,12 @@ uint16_t CPU::getAddress(AddressingMode mode) {
     }
 
     case AddressingMode::ZERO_PAGE_X: {
+        stepCycles(1);
         return (fetch() + X) & 0xFF;
     }
 
     case AddressingMode::ZERO_PAGE_Y: {
+        stepCycles(1);
         return (fetch() + Y) & 0xFF;
     }
 
@@ -1542,6 +1599,9 @@ uint16_t CPU::fetchWord() {
     return data;
 }
 
+// notes
+// TODO: fix page crossing executing everywhere
+
 void CPU::executeOnce() {
     lastCycles = cycles;
     if(nmiPending) {
@@ -1565,6 +1625,9 @@ void CPU::executeOnce() {
     currentOpcode = opcode;
     auto [instruction, addressingMode] = instructions[opcode];
     instruction(this, addressingMode);
+    // std::cout << instructionNames[opcode] << " " << std::hex << static_cast<int>(opcode) << std::dec
+    //           << " " << AddressingModeName(addressingMode) << ": " << cycles - lastCycles
+    //           << std::endl;
 }
 
 void CPU::pushByte(uint8_t data) {
@@ -1579,9 +1642,11 @@ void CPU::pushWord(uint16_t data) {
 
 void CPU::stepCycles(size_t cycles) {
     this->cycles += cycles;
-    bus->cia1->tick();
-    bus->cia2->tick();
-    bus->vic->tick();
+    for(size_t i = 0; i < cycles; i++) {
+        // bus->cia1->tick();
+        // bus->cia2->tick();
+        // bus->vic->tick();
+    }
 }
 
 void CPU::stallCycles(size_t cycles) {

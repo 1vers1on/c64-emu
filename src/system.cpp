@@ -23,6 +23,13 @@ System::System() {
 
     Floppy* floppy = new Floppy(serialBus);
     serialBus->devices.push_back(floppy);
+
+    // Initialize clock speed tracking
+    lastTime = std::chrono::high_resolution_clock::now();
+    accumulatedTime = std::chrono::duration<double>(0);
+    cycles = 0;
+    timeThreshold = std::chrono::duration<double>(0.4);
+    clockSpeed = 0;
 }
 
 System::~System() {
@@ -47,10 +54,6 @@ void System::powerOn() {
 void System::reset() {
     cpu->reset();
 }
-static auto lastTime = std::chrono::high_resolution_clock::now();
-static std::chrono::duration<double> accumulatedTime(0);
-static int tickCount = 0;
-const std::chrono::duration<double> timeThreshold(0.4);
 
 void System::step() {
     auto now = std::chrono::high_resolution_clock::now();
@@ -58,13 +61,11 @@ void System::step() {
     lastTime = now;
 
     accumulatedTime += delta;
-    tickCount++;
 
     if(accumulatedTime >= timeThreshold) {
-        double averageClockSpeed = tickCount / accumulatedTime.count();
+        double averageClockSpeed = (cpu->cycles - cycles) / accumulatedTime.count();
         clockSpeed = static_cast<int>(averageClockSpeed);
         accumulatedTime = std::chrono::duration<double>::zero();
-        tickCount = 0;
     }
 
     cpu->executeOnce();

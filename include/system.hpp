@@ -8,6 +8,7 @@
 #include <sid.hpp>
 #include <input.hpp>
 #include <serial_bus.hpp>
+#include <chrono>
 
 class System {
 public:
@@ -31,4 +32,10 @@ public:
     SID* sid;
     Input* input;
     SerialBus* serialBus;
+
+private:
+    std::chrono::time_point<std::chrono::high_resolution_clock> lastTime;
+    std::chrono::duration<double> accumulatedTime;
+    std::chrono::duration<double> timeThreshold;
+    size_t cycles;
 };

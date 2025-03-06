@@ -1,5 +1,6 @@
 // #include <SDL2/SDL_timer.h>
-#ifndef __EMSCRIPTEN__
+// #ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(TEST_6502)
 #include <cstdint>
 #include <cstring>
 #include <fstream>

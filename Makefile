@@ -14,7 +14,8 @@ EMCC := emcc  # use emscripten compiler for wasm
 EMCXX := em++ # use emscripten c++ compiler
 WASM_CFLAGS := -sWASM=1 -s EXPORTED_FUNCTIONS="['_startEmulator','_getFramebuffer','_keyDown','_keyUp','_getClockSpeed','_writeToMemory','_readFromMemory','_reset','_paused','_resume','_getMemory','_getDiffSize','_getDiff']" -sMODULARIZE -sEXPORT_ES6 --no-entry -s EXPORTED_RUNTIME_METHODS="['ccall','cwrap']" -O3 -flto -sASYNCIFY
 WASM_LDFLAGS := -sALLOW_MEMORY_GROWTH=1 -sENVIRONMENT=web --no-entry -flto -O3
-
+CFLAGS += -DTEST_6502 -DNO_MMIO
+CXXFLAGS += -DTEST_6502 -DNO_MMIO
 ifeq ($(BUILD_TYPE), debug)
 CFLAGS += -O0 -DDEBUG
 CXXFLAGS += -O0 -DDEBUG
