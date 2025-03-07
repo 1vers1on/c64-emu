@@ -1,5 +1,3 @@
-// #define TEST_6502
-
 #ifdef TEST_6502
 #include <bus.hpp>
 #include <chrono>

@@ -67,7 +67,7 @@ public:
 
     uint8_t fetch();
     uint16_t fetchWord();
-    uint16_t getAddress(AddressingMode mode);
+    uint16_t getAddress(AddressingMode mode, bool alwaysCrossPage = false);
 
     uint8_t getCurrentOpcode() const {
         return currentOpcode;

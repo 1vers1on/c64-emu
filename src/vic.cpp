@@ -92,10 +92,10 @@ void VIC::handleRasterInterrupts() {
 }
 
 void VIC::handleDMASteal() {
-    bool badLine = ((rasterLine & 0x07) == (registers[0x11] & 0x07));
-    if(badLine) {
-        cpu->stallCycles(40);
-    }
+    // bool badLine = false;
+    // if(badLine) {
+    //     cpu->stallCycles(35);
+    // }
 }
 
 void VIC::renderScanline() {

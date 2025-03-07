@@ -5,6 +5,8 @@
 #include <stdexcept>
 #include <sys/types.h>
 
+// TODO: implement timing for page crossing on illegal opcodes
+
 static const std::array<std::string, 256> instructionNames = {
     "BRK", "ORA", "KIL", "SLO", "DOP", "ORA", "ASL", "SLO", "PHP", "ORA", "ASL", "AAC", "TOP",
     "ORA", "ASL", "SLO", "BPL", "ORA", "KIL", "SLO", "DOP", "ORA", "ASL", "SLO", "CLC", "ORA",
@@ -274,7 +276,7 @@ static void BMI(CPU* cpu, AddressingMode mode) {
 }
 
 static void STA(CPU* cpu, AddressingMode mode) {
-    uint16_t address = cpu->getAddress(mode);
+    uint16_t address = cpu->getAddress(mode, false);
     cpu->bus->write(address, cpu->A);
     cpu->stepCycles(1);
 }
@@ -506,7 +508,7 @@ static void SBC(CPU* cpu, AddressingMode mode) {
 }
 
 static void DEC(CPU* cpu, AddressingMode mode) {
-    uint16_t address = cpu->getAddress(mode);
+    uint16_t address = cpu->getAddress(mode, true);
     uint8_t data = cpu->bus->read(address) - 1;
     cpu->bus->write(address, data);
     cpu->P &= ~ZERO_FLAG;
@@ -517,7 +519,7 @@ static void DEC(CPU* cpu, AddressingMode mode) {
     if(data & 0x80) {
         cpu->P |= NEGATIVE_FLAG;
     }
-    cpu->stepCycles(1);
+    cpu->stepCycles(2);
 }
 
 static void DEY(CPU* cpu, AddressingMode mode) {
@@ -547,7 +549,7 @@ static void DEX(CPU* cpu, AddressingMode mode) {
 }
 
 static void INC(CPU* cpu, AddressingMode mode) {
-    uint16_t address = cpu->getAddress(mode);
+    uint16_t address = cpu->getAddress(mode, true);
     uint8_t data = cpu->bus->read(address) + 1;
     cpu->bus->write(address, data);
     cpu->P &= ~ZERO_FLAG;
@@ -558,7 +560,7 @@ static void INC(CPU* cpu, AddressingMode mode) {
     if(data & 0x80) {
         cpu->P |= NEGATIVE_FLAG;
     }
-    cpu->stepCycles(1);
+    cpu->stepCycles(2);
 }
 
 static void INY(CPU* cpu, AddressingMode mode) {
@@ -658,7 +660,7 @@ static void TXS(CPU* cpu, AddressingMode mode) {
 }
 
 static void LSR(CPU* cpu, AddressingMode mode) {
-    uint16_t address = cpu->getAddress(mode);
+    uint16_t address = cpu->getAddress(mode, true);
     if(mode == AddressingMode::ACCUMULATOR) {
         cpu->P &= ~CARRY_FLAG;
         cpu->P &= ~ZERO_FLAG;
@@ -673,7 +675,7 @@ static void LSR(CPU* cpu, AddressingMode mode) {
         if(cpu->A & 0x80) {
             cpu->P |= NEGATIVE_FLAG;
         }
-        cpu->stepCycles(1);
+        cpu->stepCycles(2);
         return;
     }
     uint8_t data = cpu->bus->read(address);
@@ -691,11 +693,11 @@ static void LSR(CPU* cpu, AddressingMode mode) {
         cpu->P |= NEGATIVE_FLAG;
     }
     cpu->bus->write(address, data);
-    cpu->stepCycles(1);
+    cpu->stepCycles(2);
 }
 
 static void ASL(CPU* cpu, AddressingMode mode) {
-    uint16_t address = cpu->getAddress(mode);
+    uint16_t address = cpu->getAddress(mode, true);
     if(mode == AddressingMode::ACCUMULATOR) {
         cpu->P &= ~CARRY_FLAG;
         cpu->P &= ~ZERO_FLAG;
@@ -710,7 +712,7 @@ static void ASL(CPU* cpu, AddressingMode mode) {
         if(cpu->A & 0x80) {
             cpu->P |= NEGATIVE_FLAG;
         }
-        cpu->stepCycles(1);
+        cpu->stepCycles(2);
         return;
     }
     uint8_t data = cpu->bus->read(address);
@@ -728,11 +730,11 @@ static void ASL(CPU* cpu, AddressingMode mode) {
         cpu->P |= NEGATIVE_FLAG;
     }
     cpu->bus->write(address, data);
-    cpu->stepCycles(1);
+    cpu->stepCycles(2);
 }
 
 static void ROR(CPU* cpu, AddressingMode mode) {
-    uint16_t address = cpu->getAddress(mode);
+    uint16_t address = cpu->getAddress(mode, true);
     if(mode == AddressingMode::ACCUMULATOR) {
         uint8_t carry = cpu->P & CARRY_FLAG;
         cpu->P &= ~CARRY_FLAG;
@@ -751,7 +753,7 @@ static void ROR(CPU* cpu, AddressingMode mode) {
         if(cpu->A & 0x80) {
             cpu->P |= NEGATIVE_FLAG;
         }
-        cpu->stepCycles(1);
+        cpu->stepCycles(2);
         return;
     }
     uint8_t data = cpu->bus->read(address);
@@ -773,11 +775,11 @@ static void ROR(CPU* cpu, AddressingMode mode) {
         cpu->P |= NEGATIVE_FLAG;
     }
     cpu->bus->write(address, data);
-    cpu->stepCycles(1);
+    cpu->stepCycles(2);
 }
 
 static void ROL(CPU* cpu, AddressingMode mode) {
-    uint16_t address = cpu->getAddress(mode);
+    uint16_t address = cpu->getAddress(mode, true);
     if(mode == AddressingMode::ACCUMULATOR) {
         uint8_t carry = cpu->P & CARRY_FLAG;
         cpu->P &= ~CARRY_FLAG;
@@ -796,7 +798,7 @@ static void ROL(CPU* cpu, AddressingMode mode) {
         if(cpu->A & 0x80) {
             cpu->P |= NEGATIVE_FLAG;
         }
-        cpu->stepCycles(1);
+        cpu->stepCycles(2);
         return;
     }
     uint8_t data = cpu->bus->read(address);
@@ -818,7 +820,7 @@ static void ROL(CPU* cpu, AddressingMode mode) {
         cpu->P |= NEGATIVE_FLAG;
     }
     cpu->bus->write(address, data);
-    cpu->stepCycles(1);
+    cpu->stepCycles(2);
 }
 
 static void BRK(CPU* cpu, AddressingMode mode) {
@@ -1490,7 +1492,7 @@ void CPU::triggerNMI() {
     nmiPending = true;
 }
 
-uint16_t CPU::getAddress(AddressingMode mode) {
+uint16_t CPU::getAddress(AddressingMode mode, bool alwaysCrossPage) {
     switch(mode) {
     case AddressingMode::ACCUMULATOR:
         return 0;
@@ -1522,7 +1524,7 @@ uint16_t CPU::getAddress(AddressingMode mode) {
 
     case AddressingMode::ABSOLUTE_X: {
         const uint16_t address = fetchWord();
-        if((address & 0xFF00) != ((address + X) & 0xFF00)) {
+        if((address & 0xFF00) != ((address + X) & 0xFF00) || alwaysCrossPage) {
             stepCycles(1);
         }
         return address + X;
@@ -1530,7 +1532,7 @@ uint16_t CPU::getAddress(AddressingMode mode) {
 
     case AddressingMode::ABSOLUTE_Y: {
         const uint16_t address = fetchWord();
-        if((address & 0xFF00) != ((address + Y) & 0xFF00)) {
+        if((address & 0xFF00) != ((address + Y) & 0xFF00) || alwaysCrossPage) {
             stepCycles(1);
         }
         return address + Y;
@@ -1544,7 +1546,7 @@ uint16_t CPU::getAddress(AddressingMode mode) {
 
     case AddressingMode::INDIRECT_X: {
         uint8_t address = fetch();
-        stepCycles(2);
+        stepCycles(2); // might need to change this to 3
         return bus->read((address + X) & 0xFF) +
                (uint16_t(bus->read((address + X + 1) & 0xFF)) << 8);
     }
@@ -1556,7 +1558,7 @@ uint16_t CPU::getAddress(AddressingMode mode) {
 
         uint16_t deref_base = ((uint16_t)lo) | ((uint16_t)hi << 8);
         uint16_t deref = deref_base + Y;
-        if((deref_base & 0xFF00) != (deref & 0xFF00)) {
+        if((deref_base & 0xFF00) != (deref & 0xFF00) || alwaysCrossPage) {
             stepCycles(1);
         }
 
@@ -1625,9 +1627,6 @@ void CPU::executeOnce() {
     currentOpcode = opcode;
     auto [instruction, addressingMode] = instructions[opcode];
     instruction(this, addressingMode);
-    // std::cout << instructionNames[opcode] << " " << std::hex << static_cast<int>(opcode) << std::dec
-    //           << " " << AddressingModeName(addressingMode) << ": " << cycles - lastCycles
-    //           << std::endl;
 }
 
 void CPU::pushByte(uint8_t data) {
@@ -1643,11 +1642,11 @@ void CPU::pushWord(uint16_t data) {
 void CPU::stepCycles(size_t cycles) {
     this->cycles += cycles;
     for(size_t i = 0; i < cycles; i++) {
-        #ifndef NO_MMIO
+#ifndef NO_MMIO
         bus->cia1->tick();
         bus->cia2->tick();
         bus->vic->tick();
-        #endif
+#endif
     }
 }
 

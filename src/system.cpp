@@ -1,5 +1,6 @@
 #include <chrono>
 #include <floppy.hpp>
+#include <iostream>
 #include <system.hpp>
 
 System::System() {
@@ -28,7 +29,7 @@ System::System() {
     lastTime = std::chrono::high_resolution_clock::now();
     accumulatedTime = std::chrono::duration<double>(0);
     cycles = 0;
-    timeThreshold = std::chrono::duration<double>(0.4);
+    timeThreshold = std::chrono::duration<double>(1);
     clockSpeed = 0;
 }
 
@@ -66,6 +67,8 @@ void System::step() {
         double averageClockSpeed = (cpu->cycles - cycles) / accumulatedTime.count();
         clockSpeed = static_cast<int>(averageClockSpeed);
         accumulatedTime = std::chrono::duration<double>::zero();
+        cycles = cpu->cycles;
+        std::cout << "Clock speed: " << clockSpeed << " Hz" << std::endl;
     }
 
     cpu->executeOnce();
