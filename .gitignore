@@ -17,3 +17,4 @@ svelte/static/main.js
 svelte/static/main.wasm
 6502bin
 6502test.bin
+build

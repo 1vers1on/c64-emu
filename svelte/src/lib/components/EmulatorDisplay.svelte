@@ -10,20 +10,7 @@
 
     let clockSpeed = $state(0);
 
-    function start() {
-        console.log("Starting emulator...");
-        worker.postMessage({ type: "start" });
-        addToConsole("Starting emulator...");
-    }
-
-    function renderFrame() {
-        worker.postMessage({ type: "requestFrame" });
-    }
-
-    function pause() {
-        console.log("Emulation paused");
-        addToConsole("Emulation paused");
-    }
+    let audioContext: AudioContext;
 
     function screenshot() {
         const image = canvas.toDataURL("image/png");
@@ -217,7 +204,6 @@
                 gl.CLAMP_TO_EDGE,
             );
 
-            // allocate immutable storage for the texture
             gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, 320, 200);
 
             const vertexShaderSource = `#version 300 es
@@ -670,6 +656,8 @@
                 URL.revokeObjectURL(url);
             }
         };
+
+        audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     });
     function test() {
         worker.postMessage({
@@ -738,6 +726,65 @@
         input.remove();
     }
 
+    let sidNode: AudioWorkletNode;
+    let sidFilterNode: AudioWorkletNode;
+
+    async function audioWorkletSetup() {
+        try {
+            await audioContext.audioWorklet.addModule("/audio-worklet.js");
+            await audioContext.audioWorklet.addModule("/sid-filter-worklet.js");
+            sidNode = new AudioWorkletNode(audioContext, "sid-processor", {
+                outputChannelCount: [3]
+            });
+            
+            sidFilterNode = new AudioWorkletNode(
+                audioContext,
+                "sid-filter-processor",
+            );
+            
+            sidNode.port.onmessage = (event) => {
+                if (event.data.type === "ready") {
+                    console.log("SID audio processor ready");
+                }
+            };
+
+            sidNode.connect(sidFilterNode);
+            sidFilterNode.connect(audioContext.destination);
+        } catch (error) {
+            console.error("Audio Worklet setup failed:", error);
+        }
+    }
+
+    function start() {
+        audioContext.resume().then(() => {
+            audioWorkletSetup().then(() => {
+                console.log("Starting sound...");
+            });
+        });
+
+        setInterval(() => {
+            if (sidNode) {
+                // sidNode.parameters.get("v1pulseFrequency").value = Math.random() * 1000;
+                // sidNode.parameters.get("v1pulseWidth").value = Math.random();
+                sidNode.parameters.get("v1On").value = Math.random() > 0.5 ? 1 : 0;
+
+                // sidNode.parameters.get("pulseWidth").value = Math.random();
+                // sidNode.port.postMessage({
+                //     type: "update",
+                //     clockSpeed: clockSpeed,
+                // });
+            }
+        }, 200);
+        // console.log("Starting emulator...");
+        // worker.postMessage({ type: "start" });
+        // addToConsole("Starting emulator...");
+    }
+
+    function pause() {
+        console.log("Emulation paused");
+        addToConsole("Emulation paused");
+    }
+
     onDestroy(() => {
         if (worker) {
             worker.terminate();
@@ -761,16 +808,16 @@
     ></canvas>
 
     <div class="controls">
-        <button class="btn" on:click={start}>
+        <button class="btn" onclick={start}>
             <i class="fas fa-play"></i> Start
         </button>
-        <button class="btn btn-secondary" on:click={pause}>
+        <button class="btn btn-secondary" onclick={pause}>
             <i class="fas fa-pause"></i> Pause
         </button>
-        <button class="btn btn-secondary" on:click={reset}>
+        <button class="btn btn-secondary" onclick={reset}>
             <i class="fas fa-redo"></i> Reset
         </button>
-        <button class="btn btn-secondary" on:click={screenshot}>
+        <button class="btn btn-secondary" onclick={screenshot}>
             <i class="fas fa-camera"></i> Screenshot
         </button>
         <input

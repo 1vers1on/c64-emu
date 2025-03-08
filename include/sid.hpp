@@ -1,11 +1,9 @@
 #pragma once
 
 #include <cstdint>
-#include <vector>
-// #include <ASDREnvelope.hpp>
 
-#define nsPerCycle 1015 // for pal systems
-#define CLOCK_SPEED 985000
+#define SID_CLOCK_SPEED 985000
+#define SAMPLE_RATE 44100
 
 struct Voice {
     uint16_t frequency;
@@ -22,12 +20,12 @@ struct Voice {
     int decayTimeMs;
     int attackTimeMs;
     int releaseTimeMs;
-    // int sustainVolume;
     float sustainVolume;
-    float phase;
+    float phaseTriangle;
+    float phaseSawtooth;
+    float phasePulse;
     float amplitude;
     float msSinceStarted;
-    // ADSREnvelope* envelope;
 };
 
 struct Filter {

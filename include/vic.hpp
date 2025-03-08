@@ -31,16 +31,13 @@ public:
 
     void setCpu(CPU* cpu);
 
-    uint32_t getFrameCount() {
-        return frameCount;
-    }
-
     bool needsRender = false;
 
     std::array<uint32_t, 40 * 25 * 8 * 8> screen = {};
 
     uint16_t bankAddress = 0x0000;
 
+    uint32_t frameCount = 0;
 
 private:
     void handleRasterInterrupts();
@@ -59,7 +56,5 @@ private:
     uint16_t charMemOffset = 0;
     uint16_t screenMemoryOffset = 0;
     uint16_t bitmapOffset = 0;
-
-    uint32_t frameCount = 0;
 };
     

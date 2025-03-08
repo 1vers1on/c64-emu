@@ -1,4 +1,4 @@
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__)
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -127,7 +127,6 @@ void startEmulator() {
             lastTime = currentTime;
 
             EM_ASM({ processOtherStuff(); });
-            // std::cout << getClockSpeed() << std::endl;
         }
 
         if(emulatorSystem.vic->needsRender) {

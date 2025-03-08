@@ -14,7 +14,6 @@ public:
 private:
     bool byteTransferInitiated = false;
     bool byteTransferComplete = false;
-    bool dataValid = false;
     uint8_t bitTransfered = 0;
 
     void shiftBit(bool bit);

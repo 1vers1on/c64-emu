@@ -97,8 +97,8 @@ uint8_t CIA1::read(uint16_t addr) {
 }
 
 void CIA1::tick() {
-    if(lastFrameCount != bus->vic->getFrameCount()) {
-        lastFrameCount = bus->vic->getFrameCount();
+    if(lastFrameCount != bus->vic->frameCount) {
+        lastFrameCount = bus->vic->frameCount;
         if((lastFrameCount % 5) == 0) {
             tenthsSeconds += 1;
             if(tenthsSeconds == 10) {

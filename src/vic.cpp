@@ -99,106 +99,104 @@ void VIC::handleDMASteal() {
 }
 
 void VIC::renderScanline() {
-    int hScroll = registers[0x16] & 0x07;
-    int vScroll = registers[0x11] & 0x07;
-    int effectiveScanline = (rasterLine + vScroll) % 200;
-    int charRow = effectiveScanline / 8;
-    int pixelRowWithinChar = effectiveScanline % 8;
-    int baseScreenRow = charRow * 40;
+    const int hScroll = registers[0x16] & 0x07;
+    const int vScroll = registers[0x11] & 0x07;
+    const int effectiveScanline = (rasterLine + vScroll) % 200;
+    const int charRow = effectiveScanline / 8;
+    const int pixelRowWithinChar = effectiveScanline % 8;
+    const int baseScreenRow = charRow * 40;
+    const uint32_t backgroundColor = getColor(registers[0x21]);
+    const int screenOffset = baseScreenRow + bankAddress + screenMemoryOffset;
+    const int colorOffset = 0xD800 + baseScreenRow;
+    const int y = effectiveScanline;
+    const int screenBaseIndex = y * 320;
 
-    std::array<uint32_t, 320> lineBuffer;
-    lineBuffer.fill(0);
+    const uint32_t multiColor1 = getColor(registers[0x22] & 0x0F);
+    const uint32_t multiColor2 = getColor(registers[0x23] & 0x0F);
+
     if(!multiColorMode) {
         for(int cellX = 0; cellX < 40; cellX++) {
-            uint16_t screenAddr = baseScreenRow + cellX;
-            uint8_t charCode = bus->read(screenAddr + bankAddress + screenMemoryOffset);
-            uint8_t colorCode = bus->read(0xD800 + screenAddr);
-            uint16_t charRomAddr = charCode * 8 + pixelRowWithinChar;
-            uint8_t charData = 0;
+            const uint16_t screenAddr = screenOffset + cellX;
+            const uint8_t charCode = bus->read(screenAddr);
+            const uint8_t colorCode = bus->read(colorOffset + cellX);
+            const uint32_t fgColor = getColor(colorCode & 0x0F);
 
+            uint8_t charData;
             if(bankAddress == 0x0000 || bankAddress == 0x8000) {
+                const uint16_t charRomAddr = charCode * 8 + pixelRowWithinChar;
                 if(charMemOffset == 0x1000 || charMemOffset == 0x1800) {
                     charData = bus->readCharRom(charRomAddr);
                 } else {
                     charData = bus->read(charRomAddr + charMemOffset + bankAddress);
                 }
             } else if(bitmapMode) {
-                charData = bus->read(bitmapOffset + bankAddress + screenAddr);
+                charData = bus->read(bitmapOffset + bankAddress + baseScreenRow + cellX);
             } else {
+                const uint16_t charRomAddr = charCode * 8 + pixelRowWithinChar;
                 charData = bus->read(charRomAddr + charMemOffset + bankAddress);
             }
 
-            int basePixelIndex = cellX * 8;
-            for(int bit = 0; bit < 8; bit++) {
-                bool pixelOn = ((charData >> (7 - bit)) & 0x01) != 0;
-                if(bitmapMode) {
-                    lineBuffer[basePixelIndex + bit] =
-                        pixelOn ? getColor(charCode & 0x0F) : getColor((charCode & 0xF0) >> 4);
-                } else {
-                    lineBuffer[basePixelIndex + bit] =
-                        pixelOn ? getColor(colorCode & 0x0F) : getColor(registers[0x21]);
+            const int screenX = ((cellX * 8) - hScroll + 320) % 320;
+
+            if(bitmapMode) {
+                const uint32_t bgColor = getColor((charCode & 0xF0) >> 4);
+                const uint32_t fgColor = getColor(charCode & 0x0F);
+
+                for(int bit = 0; bit < 8; bit++) {
+                    const bool pixelOn = ((charData >> (7 - bit)) & 0x01) != 0;
+                    const int x = (screenX + bit) % 320;
+                    screen[screenBaseIndex + x] = pixelOn ? fgColor : bgColor;
+                }
+            } else {
+                for(int bit = 0; bit < 8; bit++) {
+                    const bool pixelOn = ((charData >> (7 - bit)) & 0x01) != 0;
+                    const int x = (screenX + bit) % 320;
+                    screen[screenBaseIndex + x] = pixelOn ? fgColor : backgroundColor;
                 }
             }
         }
     } else {
         for(int cellX = 0; cellX < 20; cellX++) {
-            uint16_t screenAddr = baseScreenRow + cellX;
-            uint8_t charCode = bus->read(screenAddr + bankAddress + screenMemoryOffset);
-            uint8_t colorCode = bus->read(0xD800 + screenAddr);
-            uint16_t charRomAddr = charCode * 8 + pixelRowWithinChar;
-            uint8_t charData = 0;
+            const uint16_t screenAddr = screenOffset + cellX;
+            const uint8_t charCode = bus->read(screenAddr);
+            const uint8_t colorCode = bus->read(colorOffset + cellX);
+            const uint32_t color3 = getColor(colorCode & 0x0F);
 
+            uint8_t charData;
             if(bankAddress == 0x0000 || bankAddress == 0x8000) {
+                const uint16_t charRomAddr = charCode * 8 + pixelRowWithinChar;
                 if(charMemOffset == 0x1000 || charMemOffset == 0x1800) {
                     charData = bus->readCharRom(charRomAddr);
                 } else {
                     charData = bus->read(charRomAddr + charMemOffset + bankAddress);
                 }
             } else if(bitmapMode) {
-                charData = bus->read(bitmapOffset + bankAddress + screenAddr);
+                charData = bus->read(bitmapOffset + bankAddress + baseScreenRow + cellX);
             } else {
+                const uint16_t charRomAddr = charCode * 8 + pixelRowWithinChar;
                 charData = bus->read(charRomAddr + charMemOffset + bankAddress);
             }
 
-            int basePixelIndex = cellX * 8;
+            const int screenX = ((cellX * 8) - hScroll + 320) % 320;
+
             for(int bit = 0; bit < 4; bit++) {
-                uint8_t colorIndex = (charData >> (6 - bit * 2)) & 0x03;
+                const uint8_t colorIndex = (charData >> (6 - bit * 2)) & 0x03;
                 uint32_t color;
-                switch(colorIndex) {
-                case 0b00:
-                    color = getColor(registers[0x21]);
-                    break;
-                case 0b01:
-                    color = getColor(registers[0x22] & 0x0F);
-                    break;
-                case 0b10:
-                    color = getColor(registers[0x23] & 0x0F);
-                    break;
-                case 0b11:
-                    color = getColor(colorCode & 0x0F);
-                    break;
+
+                if(colorIndex == 0) {
+                    color = backgroundColor;
+                } else if(colorIndex == 1) {
+                    color = multiColor1;
+                } else if(colorIndex == 2) {
+                    color = multiColor2;
+                } else {
+                    color = color3;
                 }
 
-                for(int i = 0; i < 2; i++) {
-                    lineBuffer[basePixelIndex + bit * 2 + i] = color;
-                }
+                const int x = (screenX + bit * 2) % 320;
+                screen[screenBaseIndex + x] = color;
+                screen[screenBaseIndex + ((x + 1) % 320)] = color;
             }
-        }
-    }
-
-    int y = effectiveScanline;
-    // perform horizontal scrolling directly into the screen row
-    if(hScroll == 0) {
-        for(int x = 0; x < 320; x++) {
-            screen[y * 320 + x] = lineBuffer[x];
-        }
-    } else {
-        int tail = 320 - hScroll;
-        for(int x = 0; x < tail; x++) {
-            screen[y * 320 + x] = lineBuffer[x + hScroll];
-        }
-        for(int x = 0; x < hScroll; x++) {
-            screen[y * 320 + tail + x] = lineBuffer[x];
         }
     }
 }

@@ -182,7 +182,7 @@ int main() {
     // cpu.bus->loadCharacterRom("c64.chrom.bin");
     int i = 0;
     system.vic->setFramebufferCallback([&i](std::array<uint32_t, 40 * 25 * 8 * 8>& screen) {
-        write_bmp(screen, "output/" + std::to_string(i % 2) + ".bmp");
+        write_bmp(screen, "../output/" + std::to_string(i % 2) + ".bmp");
         i++;
     });
 

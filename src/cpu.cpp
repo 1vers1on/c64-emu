@@ -30,39 +30,6 @@ static const std::array<std::string, 256> instructionNames = {
     "ISC", "SED", "SBC", "NOP", "ISC", "TOP", "SBC", "INC", "ISC",
 };
 
-static std::string AddressingModeName(AddressingMode mode) {
-    switch(mode) {
-    case AddressingMode::IMMEDIATE:
-        return "IMMEDIATE";
-    case AddressingMode::ZERO_PAGE:
-        return "ZERO_PAGE";
-    case AddressingMode::ZERO_PAGE_X:
-        return "ZERO_PAGE_X";
-    case AddressingMode::ZERO_PAGE_Y:
-        return "ZERO_PAGE_Y";
-    case AddressingMode::ABSOLUTE:
-        return "ABSOLUTE";
-    case AddressingMode::ABSOLUTE_X:
-        return "ABSOLUTE_X";
-    case AddressingMode::ABSOLUTE_Y:
-        return "ABSOLUTE_Y";
-    case AddressingMode::INDIRECT:
-        return "INDIRECT";
-    case AddressingMode::INDIRECT_X:
-        return "INDIRECT_X";
-    case AddressingMode::INDIRECT_Y:
-        return "INDIRECT_Y";
-    case AddressingMode::ACCUMULATOR:
-        return "ACCUMULATOR";
-    case AddressingMode::RELATIVE:
-        return "RELATIVE";
-    case AddressingMode::IMPLIED:
-        return "IMPLIED";
-    }
-
-    return "UNKNOWN";
-}
-
 static void unkownInstruction(CPU* cpu, AddressingMode mode) {
     std::cout << "opcode: " << std::hex << static_cast<int>(cpu->getCurrentOpcode()) << std::dec
               << "\n";
@@ -76,42 +43,27 @@ static void JMP(CPU* cpu, AddressingMode mode) {
 static void LDX(CPU* cpu, AddressingMode mode) {
     uint16_t address = cpu->getAddress(mode);
     cpu->X = cpu->bus->read(address);
-    cpu->P &= ~ZERO_FLAG;
-    cpu->P &= ~NEGATIVE_FLAG;
-    if(cpu->X == 0) {
-        cpu->P |= ZERO_FLAG;
-    }
-    if(cpu->X & 0x80) {
-        cpu->P |= NEGATIVE_FLAG;
-    }
+    cpu->P &= ~(ZERO_FLAG | NEGATIVE_FLAG);
+    cpu->P |= (!cpu->X) * ZERO_FLAG;
+    cpu->P |= (cpu->X & 0x80);
     cpu->stepCycles(1);
 }
 
 static void LDA(CPU* cpu, AddressingMode mode) {
     uint16_t address = cpu->getAddress(mode);
     cpu->A = cpu->bus->read(address);
-    cpu->P &= ~ZERO_FLAG;
-    cpu->P &= ~NEGATIVE_FLAG;
-    if(cpu->A == 0) {
-        cpu->P |= ZERO_FLAG;
-    }
-    if(cpu->A & 0x80) {
-        cpu->P |= NEGATIVE_FLAG;
-    }
+    cpu->P &= ~(ZERO_FLAG | NEGATIVE_FLAG);
+    cpu->P |= (!cpu->A) * ZERO_FLAG;
+    cpu->P |= (cpu->A & 0x80);
     cpu->stepCycles(1);
 }
 
 static void LDY(CPU* cpu, AddressingMode mode) {
     uint16_t address = cpu->getAddress(mode);
     cpu->Y = cpu->bus->read(address);
-    cpu->P &= ~ZERO_FLAG;
-    cpu->P &= ~NEGATIVE_FLAG;
-    if(cpu->Y == 0) {
-        cpu->P |= ZERO_FLAG;
-    }
-    if(cpu->Y & 0x80) {
-        cpu->P |= NEGATIVE_FLAG;
-    }
+    cpu->P &= ~(ZERO_FLAG | NEGATIVE_FLAG);
+    cpu->P |= (!cpu->Y) * ZERO_FLAG;
+    cpu->P |= (cpu->Y & 0x80);
     cpu->stepCycles(1);
 }
 
@@ -316,14 +268,9 @@ static void PHA(CPU* cpu, AddressingMode mode) {
 
 static void PLA(CPU* cpu, AddressingMode mode) {
     cpu->A = cpu->popByte();
-    cpu->P &= ~ZERO_FLAG;
-    cpu->P &= ~NEGATIVE_FLAG;
-    if(cpu->A == 0) {
-        cpu->P |= ZERO_FLAG;
-    }
-    if(cpu->A & 0x80) {
-        cpu->P |= NEGATIVE_FLAG;
-    }
+    cpu->P &= ~(ZERO_FLAG | NEGATIVE_FLAG);
+    cpu->P |= (!cpu->A) * ZERO_FLAG;
+    cpu->P |= (cpu->A & 0x80);
     cpu->stepCycles(2);
 }
 
@@ -342,14 +289,9 @@ static void RTI(CPU* cpu, AddressingMode mode) {
 static void AND(CPU* cpu, AddressingMode mode) {
     uint16_t address = cpu->getAddress(mode);
     cpu->A &= cpu->bus->read(address);
-    cpu->P &= ~ZERO_FLAG;
-    cpu->P &= ~NEGATIVE_FLAG;
-    if(cpu->A == 0) {
-        cpu->P |= ZERO_FLAG;
-    }
-    if(cpu->A & 0x80) {
-        cpu->P |= NEGATIVE_FLAG;
-    }
+    cpu->P &= ~(ZERO_FLAG | NEGATIVE_FLAG);
+    cpu->P |= (!cpu->A) * ZERO_FLAG;
+    cpu->P |= (cpu->A & 0x80);
     cpu->stepCycles(1);
 }
 
@@ -413,28 +355,18 @@ static void CPY(CPU* cpu, AddressingMode mode) {
 static void ORA(CPU* cpu, AddressingMode mode) {
     uint16_t address = cpu->getAddress(mode);
     cpu->A |= cpu->bus->read(address);
-    cpu->P &= ~ZERO_FLAG;
-    cpu->P &= ~NEGATIVE_FLAG;
-    if(cpu->A == 0) {
-        cpu->P |= ZERO_FLAG;
-    }
-    if(cpu->A & 0x80) {
-        cpu->P |= NEGATIVE_FLAG;
-    }
+    cpu->P &= ~(ZERO_FLAG | NEGATIVE_FLAG);
+    cpu->P |= (!cpu->A) * ZERO_FLAG;
+    cpu->P |= (cpu->A & 0x80);
     cpu->stepCycles(1);
 }
 
 static void EOR(CPU* cpu, AddressingMode mode) {
     uint16_t address = cpu->getAddress(mode);
     cpu->A ^= cpu->bus->read(address);
-    cpu->P &= ~ZERO_FLAG;
-    cpu->P &= ~NEGATIVE_FLAG;
-    if(cpu->A == 0) {
-        cpu->P |= ZERO_FLAG;
-    }
-    if(cpu->A & 0x80) {
-        cpu->P |= NEGATIVE_FLAG;
-    }
+    cpu->P &= ~(ZERO_FLAG | NEGATIVE_FLAG);
+    cpu->P |= (!cpu->A) * ZERO_FLAG;
+    cpu->P |= (cpu->A & 0x80);
     cpu->stepCycles(1);
 }
 
@@ -511,40 +443,25 @@ static void DEC(CPU* cpu, AddressingMode mode) {
     uint16_t address = cpu->getAddress(mode, true);
     uint8_t data = cpu->bus->read(address) - 1;
     cpu->bus->write(address, data);
-    cpu->P &= ~ZERO_FLAG;
-    cpu->P &= ~NEGATIVE_FLAG;
-    if(data == 0) {
-        cpu->P |= ZERO_FLAG;
-    }
-    if(data & 0x80) {
-        cpu->P |= NEGATIVE_FLAG;
-    }
+    cpu->P &= ~(ZERO_FLAG | NEGATIVE_FLAG);
+    cpu->P |= (!data) * ZERO_FLAG;
+    cpu->P |= (data & 0x80);
     cpu->stepCycles(2);
 }
 
 static void DEY(CPU* cpu, AddressingMode mode) {
     cpu->Y -= 1;
-    cpu->P &= ~ZERO_FLAG;
-    cpu->P &= ~NEGATIVE_FLAG;
-    if(cpu->Y == 0) {
-        cpu->P |= ZERO_FLAG;
-    }
-    if(cpu->Y & 0x80) {
-        cpu->P |= NEGATIVE_FLAG;
-    }
+    cpu->P &= ~(ZERO_FLAG | NEGATIVE_FLAG);
+    cpu->P |= (!cpu->Y) * ZERO_FLAG;
+    cpu->P |= (cpu->Y & 0x80);
     cpu->stepCycles(1);
 }
 
 static void DEX(CPU* cpu, AddressingMode mode) {
     cpu->X -= 1;
-    cpu->P &= ~ZERO_FLAG;
-    cpu->P &= ~NEGATIVE_FLAG;
-    if(cpu->X == 0) {
-        cpu->P |= ZERO_FLAG;
-    }
-    if(cpu->X & 0x80) {
-        cpu->P |= NEGATIVE_FLAG;
-    }
+    cpu->P &= ~(ZERO_FLAG | NEGATIVE_FLAG);
+    cpu->P |= (!cpu->X) * ZERO_FLAG;
+    cpu->P |= (cpu->X & 0x80);
     cpu->stepCycles(1);
 }
 
@@ -552,105 +469,65 @@ static void INC(CPU* cpu, AddressingMode mode) {
     uint16_t address = cpu->getAddress(mode, true);
     uint8_t data = cpu->bus->read(address) + 1;
     cpu->bus->write(address, data);
-    cpu->P &= ~ZERO_FLAG;
-    cpu->P &= ~NEGATIVE_FLAG;
-    if(data == 0) {
-        cpu->P |= ZERO_FLAG;
-    }
-    if(data & 0x80) {
-        cpu->P |= NEGATIVE_FLAG;
-    }
+    cpu->P &= ~(ZERO_FLAG | NEGATIVE_FLAG);
+    cpu->P |= (!data) * ZERO_FLAG;
+    cpu->P |= (data & 0x80);
     cpu->stepCycles(2);
 }
 
 static void INY(CPU* cpu, AddressingMode mode) {
     cpu->Y += 1;
-    cpu->P &= ~ZERO_FLAG;
-    cpu->P &= ~NEGATIVE_FLAG;
-    if(cpu->Y == 0) {
-        cpu->P |= ZERO_FLAG;
-    }
-    if(cpu->Y & 0x80) {
-        cpu->P |= NEGATIVE_FLAG;
-    }
+    cpu->P &= ~(ZERO_FLAG | NEGATIVE_FLAG);
+    cpu->P |= (!cpu->Y) * ZERO_FLAG;
+    cpu->P |= (cpu->Y & 0x80);
     cpu->stepCycles(1);
 }
 
 static void INX(CPU* cpu, AddressingMode mode) {
     cpu->X += 1;
-    cpu->P &= ~ZERO_FLAG;
-    cpu->P &= ~NEGATIVE_FLAG;
-    if(cpu->X == 0) {
-        cpu->P |= ZERO_FLAG;
-    }
-    if(cpu->X & 0x80) {
-        cpu->P |= NEGATIVE_FLAG;
-    }
+    cpu->P &= ~(ZERO_FLAG | NEGATIVE_FLAG);
+    cpu->P |= (!cpu->X) * ZERO_FLAG;
+    cpu->P |= (cpu->X & 0x80);
     cpu->stepCycles(1);
 }
 
 static void TAY(CPU* cpu, AddressingMode mode) {
     cpu->Y = cpu->A;
-    cpu->P &= ~ZERO_FLAG;
-    cpu->P &= ~NEGATIVE_FLAG;
-    if(cpu->Y == 0) {
-        cpu->P |= ZERO_FLAG;
-    }
-    if(cpu->Y & 0x80) {
-        cpu->P |= NEGATIVE_FLAG;
-    }
+    cpu->P &= ~(ZERO_FLAG | NEGATIVE_FLAG);
+    cpu->P |= (!cpu->Y) * ZERO_FLAG;
+    cpu->P |= (cpu->Y & 0x80);
     cpu->stepCycles(1);
 }
 
 static void TAX(CPU* cpu, AddressingMode mode) {
     cpu->X = cpu->A;
-    cpu->P &= ~ZERO_FLAG;
-    cpu->P &= ~NEGATIVE_FLAG;
-    if(cpu->X == 0) {
-        cpu->P |= ZERO_FLAG;
-    }
-    if(cpu->X & 0x80) {
-        cpu->P |= NEGATIVE_FLAG;
-    }
+    cpu->P &= ~(ZERO_FLAG | NEGATIVE_FLAG);
+    cpu->P |= (!cpu->X) * ZERO_FLAG;
+    cpu->P |= (cpu->X & 0x80);
     cpu->stepCycles(1);
 }
 
 static void TSX(CPU* cpu, AddressingMode mode) {
     cpu->X = cpu->SP;
-    cpu->P &= ~ZERO_FLAG;
-    cpu->P &= ~NEGATIVE_FLAG;
-    if(cpu->X == 0) {
-        cpu->P |= ZERO_FLAG;
-    }
-    if(cpu->X & 0x80) {
-        cpu->P |= NEGATIVE_FLAG;
-    }
+    cpu->P &= ~(ZERO_FLAG | NEGATIVE_FLAG);
+    cpu->P |= (!cpu->X) * ZERO_FLAG;
+    cpu->P |= (cpu->X & 0x80);
     cpu->stepCycles(1);
 }
 
 static void TYA(CPU* cpu, AddressingMode mode) {
     cpu->A = cpu->Y;
-    cpu->P &= ~ZERO_FLAG;
-    cpu->P &= ~NEGATIVE_FLAG;
-    if(cpu->A == 0) {
-        cpu->P |= ZERO_FLAG;
-    }
-    if(cpu->A & 0x80) {
-        cpu->P |= NEGATIVE_FLAG;
-    }
+    cpu->P &= ~(ZERO_FLAG | NEGATIVE_FLAG);
+    cpu->P |= (!cpu->A) * ZERO_FLAG;
+    cpu->P |= (cpu->A & 0x80);
     cpu->stepCycles(1);
 }
 
 static void TXA(CPU* cpu, AddressingMode mode) {
     cpu->A = cpu->X;
-    cpu->P &= ~ZERO_FLAG;
-    cpu->P &= ~NEGATIVE_FLAG;
-    if(cpu->A == 0) {
-        cpu->P |= ZERO_FLAG;
-    }
-    if(cpu->A & 0x80) {
-        cpu->P |= NEGATIVE_FLAG;
-    }
+    cpu->P &= ~(ZERO_FLAG | NEGATIVE_FLAG);
+    cpu->P |= (!cpu->A) * ZERO_FLAG;
+    cpu->P |= (cpu->A & 0x80);
     cpu->stepCycles(1);
 }
 
@@ -848,14 +725,9 @@ static void LAX(CPU* cpu, AddressingMode mode) {
     uint8_t data = cpu->bus->read(address);
     cpu->A = data;
     cpu->X = data;
-    cpu->P &= ~ZERO_FLAG;
-    cpu->P &= ~NEGATIVE_FLAG;
-    if(data == 0) {
-        cpu->P |= ZERO_FLAG;
-    }
-    if(data & 0x80) {
-        cpu->P |= NEGATIVE_FLAG;
-    }
+    cpu->P &= ~(ZERO_FLAG | NEGATIVE_FLAG);
+    cpu->P |= (!data) * ZERO_FLAG;
+    cpu->P |= (data & 0x80);
     cpu->stepCycles(1);
 }
 
@@ -1055,14 +927,9 @@ static void XAA(CPU* cpu, AddressingMode mode) {
     uint16_t address = cpu->getAddress(mode);
     uint8_t data = cpu->bus->read(address);
     cpu->A &= cpu->X & data;
-    cpu->P &= ~ZERO_FLAG;
-    cpu->P &= ~NEGATIVE_FLAG;
-    if(cpu->A == 0) {
-        cpu->P |= ZERO_FLAG;
-    }
-    if(cpu->A & 0x80) {
-        cpu->P |= NEGATIVE_FLAG;
-    }
+    cpu->P &= ~(ZERO_FLAG | NEGATIVE_FLAG);
+    cpu->P |= (!cpu->A) * ZERO_FLAG;
+    cpu->P |= (cpu->A & 0x80);
     cpu->stepCycles(1);
 }
 
@@ -1076,7 +943,6 @@ static void KIL(CPU* cpu, AddressingMode mode) {
 // argument + 1. Store result in memory.
 static void XAS(CPU* cpu, AddressingMode mode) {
     uint16_t address = cpu->getAddress(mode);
-    uint8_t data = cpu->bus->read(address);
     cpu->X = cpu->A & cpu->X;
     cpu->SP = cpu->X;
     cpu->bus->write(address, cpu->SP & ((address >> 8) + 1));
@@ -1087,14 +953,9 @@ static void AAC(CPU* cpu, AddressingMode mode) {
     uint16_t address = cpu->getAddress(mode);
     uint8_t data = cpu->bus->read(address);
     cpu->A &= data;
-    cpu->P &= ~ZERO_FLAG;
-    cpu->P &= ~NEGATIVE_FLAG;
-    if(cpu->A == 0) {
-        cpu->P |= ZERO_FLAG;
-    }
-    if(cpu->A & 0x80) {
-        cpu->P |= NEGATIVE_FLAG;
-    }
+    cpu->P &= ~(ZERO_FLAG | NEGATIVE_FLAG);
+    cpu->P |= (!cpu->A) * ZERO_FLAG;
+    cpu->P |= (cpu->A & 0x80);
     cpu->P &= ~CARRY_FLAG;
     if(cpu->P & NEGATIVE_FLAG) {
         cpu->P |= CARRY_FLAG;
@@ -1106,14 +967,9 @@ static void ASR(CPU* cpu, AddressingMode mode) {
     uint16_t address = cpu->getAddress(mode);
     uint8_t data = cpu->bus->read(address);
     cpu->A &= data;
-    cpu->P &= ~ZERO_FLAG;
-    cpu->P &= ~NEGATIVE_FLAG;
-    if(cpu->A == 0) {
-        cpu->P |= ZERO_FLAG;
-    }
-    if(cpu->A & 0x80) {
-        cpu->P |= NEGATIVE_FLAG;
-    }
+    cpu->P &= ~(ZERO_FLAG | NEGATIVE_FLAG);
+    cpu->P |= (!cpu->A) * ZERO_FLAG;
+    cpu->P |= (cpu->A & 0x80);
     cpu->P &= ~CARRY_FLAG;
     if(cpu->A & 0x01) {
         cpu->P |= CARRY_FLAG;
@@ -1170,14 +1026,9 @@ static void ATX(CPU* cpu, AddressingMode mode) {
     uint8_t data = cpu->bus->read(address);
     cpu->A &= data;
     cpu->X = cpu->A;
-    cpu->P &= ~ZERO_FLAG;
-    cpu->P &= ~NEGATIVE_FLAG;
-    if(cpu->X == 0) {
-        cpu->P |= ZERO_FLAG;
-    }
-    if(cpu->X & 0x80) {
-        cpu->P |= NEGATIVE_FLAG;
-    }
+    cpu->P &= ~(ZERO_FLAG | NEGATIVE_FLAG);
+    cpu->P |= (!cpu->X) * ZERO_FLAG;
+    cpu->P |= (cpu->X & 0x80);
     cpu->stepCycles(1);
 }
 
@@ -1646,6 +1497,7 @@ void CPU::stepCycles(size_t cycles) {
         bus->cia1->tick();
         bus->cia2->tick();
         bus->vic->tick();
+        bus->sid->tick();
 #endif
     }
 }

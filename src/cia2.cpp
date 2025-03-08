@@ -273,8 +273,8 @@ uint8_t CIA2::read(uint16_t addr) {
 }
 
 void CIA2::tick() {
-    if(lastFrameCount != bus->vic->getFrameCount()) {
-        lastFrameCount = bus->vic->getFrameCount();
+    if(lastFrameCount != bus->vic->frameCount) {
+        lastFrameCount = bus->vic->frameCount;
         if((lastFrameCount % 5) == 0) {
             tenthsSeconds += 1;
             if(tenthsSeconds == 10) {

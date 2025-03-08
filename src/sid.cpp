@@ -15,97 +15,33 @@ SID::SID() {
     // voice3.envelope = new ADSREnvelope(0, 0, 0, 0);
 }
 
-float triangleWave(float phase) {
-    return 2 * std::abs(2 * (phase - std::floor(phase + 0.5f)));
-}
+static float pulseWave(Voice& voice) {
+    int period = SID_CLOCK_SPEED / voice.frequency;
 
-float sawtoothWave(float phase) {
-    return 2 * (phase - std::floor(phase));
-}
+    int pulseWidth = static_cast<int>(period * voice.pulseWidth);
 
-float pulseWave(float phase, float pulseWidth) {
-    return phase < pulseWidth ? 1.0f : -1.0f;
+    float phase = fmod(voice.phasePulse, period);
+
+    if(phase < pulseWidth) {
+        voice.phasePulse += 1.0f;
+        voice.phasePulse = fmod(voice.phasePulse, period);
+        return 1.0f;
+    } else {
+        voice.phasePulse += 1.0f;
+        voice.phasePulse = fmod(voice.phasePulse, period);
+        return -1.0f;
+    }
 }
 
 float SID::tick() {
-    float voice1Output = 0;
-    if(!voice1.disableVoice) {
-        voice1.msSinceStarted += nsPerCycle / 1000000.0f;
-        voice1.phase += static_cast<float>(voice1.frequency) / CLOCK_SPEED;
-
+    float output = 0.0f;
+    if(voice1.voiceOn) {
         if(voice1.pulseEnabled) {
-            voice1Output += pulseWave(voice1.phase, voice1.pulseWidth);
+            output += pulseWave(voice1);
         }
-        if(voice1.sawtoothEnabled) {
-            voice1Output += sawtoothWave(voice1.phase);
-        }
-        if(voice1.triangleEnabled) {
-            voice1Output += triangleWave(voice1.phase);
-        }
-
-        // voice1Output *= voice1.envelope->process(voice1.msSinceStarted);
     }
 
-    float voice2Output = 0;
-    if(!voice2.disableVoice) {
-        voice2.msSinceStarted += nsPerCycle / 1000000.0f;
-        voice2.phase += static_cast<float>(voice2.frequency) / CLOCK_SPEED;
-
-        if(voice2.pulseEnabled) {
-            voice2Output += pulseWave(voice2.phase, voice2.pulseWidth);
-        }
-        if(voice2.sawtoothEnabled) {
-            voice2Output += sawtoothWave(voice2.phase);
-        }
-        if(voice2.triangleEnabled) {
-            voice2Output += triangleWave(voice2.phase);
-        }
-
-        // voice2Output *= voice2.envelope->process(voice2.msSinceStarted * 1000000.0f);
-    }
-
-    float voice3Output = 0;
-    if(!voice3.disableVoice) {
-        voice3.msSinceStarted += nsPerCycle / 1000000.0f;
-        voice3.phase += static_cast<float>(voice3.frequency) / CLOCK_SPEED;
-
-        if(voice3.pulseEnabled) {
-            voice3Output += pulseWave(voice3.phase, voice3.pulseWidth);
-        }
-        if(voice3.sawtoothEnabled) {
-            voice3Output += sawtoothWave(voice3.phase);
-        }
-        if(voice3.triangleEnabled) {
-            voice3Output += triangleWave(voice3.phase);
-        }
-
-        // voice3Output *= voice3.envelope->process(voice3.msSinceStarted * 1000000.0f);
-    }
-    float finalOutput = 0;
-    float filterOutput = 0;
-    // just ignore the pass filters for now
-    if(filter.voice1Filtered) {
-        filterOutput += voice1Output;
-    } else {
-        finalOutput += voice1Output;
-    }
-
-    if(filter.voice2Filtered) {
-        filterOutput += voice2Output;
-    } else {
-        finalOutput += voice2Output;
-    }
-
-    if(filter.voice3Filtered) {
-        filterOutput += voice3Output;
-    } else {
-        finalOutput += voice3Output;
-    }
-
-    filterOutput *= filter.volume / 15.0f;
-    finalOutput += filterOutput;
-
-    return finalOutput;
+    return output;
 }
 
 int decodeDecayTime(uint8_t value) {
