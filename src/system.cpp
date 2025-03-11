@@ -4,14 +4,14 @@
 #include <system.hpp>
 
 System::System() {
-    bus = new Bus();
+    bus = new C64Bus();
     serialBus = new SerialBus();
     cpu = new CPU(bus);
     cia1 = new CIA1(bus);
     cia2 = new CIA2(bus, serialBus);
     vic = new VIC(bus);
     sid = new SID();
-    input = new Input();
+    input = new Input(bus);
     bus->cia1 = cia1;
     bus->cia2 = cia2;
     bus->vic = vic;
@@ -21,6 +21,15 @@ System::System() {
     cia1->setCpu(cpu);
     cia2->setCpu(cpu);
     vic->setCpu(cpu);
+
+    #ifndef NO_MMIO
+    cpu->setCycleCallback([this]() {
+        cia1->tick();
+        cia2->tick();
+        vic->tick();
+        sid->tick();
+    });
+    #endif
 
     Floppy* floppy = new Floppy(serialBus);
     serialBus->devices.push_back(floppy);

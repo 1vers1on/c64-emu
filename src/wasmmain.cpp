@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cstring>
 #include <emscripten.h>
+#include <emscripten/bind.h>
 #include <iostream>
 #include <sys/types.h>
 #include <system.hpp>
@@ -21,6 +22,7 @@ System emulatorSystem;
 bool paused = false;
 
 extern "C" {
+
 EMSCRIPTEN_KEEPALIVE
 void reset() {
     std::cout << "Resetting emulator" << std::endl;
@@ -85,6 +87,72 @@ uint32_t* getDiff() {
 }
 
 EMSCRIPTEN_KEEPALIVE
+SidState getSidState() {
+    SidState state = emulatorSystem.sid->getState();
+    return state;
+}
+
+EMSCRIPTEN_BINDINGS(sid_state) {
+    emscripten::value_object<SidState>("SidState")
+        .field("v1Frequency", &SidState::v1Frequency)
+        .field("v1PulseWidth", &SidState::v1PulseWidth)
+        .field("v1On", &SidState::v1On)
+        .field("v1Sync", &SidState::v1Sync)
+        .field("v1RingMod", &SidState::v1RingMod)
+        .field("v1Disable", &SidState::v1Disable)
+        .field("v1Triangle", &SidState::v1Triangle)
+        .field("v1Sawtooth", &SidState::v1Sawtooth)
+        .field("v1Pulse", &SidState::v1Pulse)
+        .field("v1Noise", &SidState::v1Noise)
+        .field("v1DecayTime", &SidState::v1DecayTime)
+        .field("v1AttackTime", &SidState::v1AttackTime)
+        .field("v1ReleaseTime", &SidState::v1ReleaseTime)
+        .field("v1SustainVolume", &SidState::v1SustainVolume)
+
+        .field("v2Frequency", &SidState::v2Frequency)
+        .field("v2PulseWidth", &SidState::v2PulseWidth)
+        .field("v2On", &SidState::v2On)
+        .field("v2Sync", &SidState::v2Sync)
+        .field("v2RingMod", &SidState::v2RingMod)
+        .field("v2Disable", &SidState::v2Disable)
+        .field("v2Triangle", &SidState::v2Triangle)
+        .field("v2Sawtooth", &SidState::v2Sawtooth)
+        .field("v2Pulse", &SidState::v2Pulse)
+        .field("v2Noise", &SidState::v2Noise)
+        .field("v2DecayTime", &SidState::v2DecayTime)
+        .field("v2AttackTime", &SidState::v2AttackTime)
+        .field("v2ReleaseTime", &SidState::v2ReleaseTime)
+        .field("v2SustainVolume", &SidState::v2SustainVolume)
+
+        .field("v3Frequency", &SidState::v3Frequency)
+        .field("v3PulseWidth", &SidState::v3PulseWidth)
+        .field("v3On", &SidState::v3On)
+        .field("v3Sync", &SidState::v3Sync)
+        .field("v3RingMod", &SidState::v3RingMod)
+        .field("v3Disable", &SidState::v3Disable)
+        .field("v3Triangle", &SidState::v3Triangle)
+        .field("v3Sawtooth", &SidState::v3Sawtooth)
+        .field("v3Pulse", &SidState::v3Pulse)
+        .field("v3Noise", &SidState::v3Noise)
+        .field("v3DecayTime", &SidState::v3DecayTime)
+        .field("v3AttackTime", &SidState::v3AttackTime)
+        .field("v3ReleaseTime", &SidState::v3ReleaseTime)
+        .field("v3SustainVolume", &SidState::v3SustainVolume)
+
+        .field("cutoffFrequency", &SidState::cutoffFrequency)
+        .field("filterResonance", &SidState::filterResonance)
+        .field("volume", &SidState::volume)
+        .field("lowPassFilter", &SidState::lowPassFilter)
+        .field("bandPassFilter", &SidState::bandPassFilter)
+        .field("highPassFilter", &SidState::highPassFilter)
+        .field("voice1Filtered", &SidState::voice1Filtered)
+        .field("voice2Filtered", &SidState::voice2Filtered)
+        .field("voice3Filtered", &SidState::voice3Filtered);
+
+    emscripten::function("getSidState", &getSidState);
+}
+
+EMSCRIPTEN_KEEPALIVE
 void startEmulator() {
     std::cout << "Starting emulator" << std::endl;
     emulatorSystem.vic->setFramebufferCallback([](std::array<uint32_t, 40 * 25 * 8 * 8>& screen) {
@@ -112,6 +180,7 @@ void startEmulator() {
         std::memcpy(lastFramebuffer.data(), screen.data(), screen.size() * sizeof(uint32_t));
     });
     emulatorSystem.powerOn();
+    emulatorSystem.sid->setWriteCallback([]() { EM_ASM({ sidStateChanged(); }); });
 
     while(true) {
         emulatorSystem.step();

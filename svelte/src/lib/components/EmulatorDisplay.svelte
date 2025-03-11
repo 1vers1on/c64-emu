@@ -766,7 +766,7 @@
             if (sidNode) {
                 // sidNode.parameters.get("v1pulseFrequency").value = Math.random() * 1000;
                 // sidNode.parameters.get("v1pulseWidth").value = Math.random();
-                sidNode.parameters.get("v1On").value = Math.random() > 0.5 ? 1 : 0;
+                // sidNode.parameters.get("v1On").value = Math.random() > 0.5 ? 1 : 0;
 
                 // sidNode.parameters.get("pulseWidth").value = Math.random();
                 // sidNode.port.postMessage({
@@ -775,9 +775,9 @@
                 // });
             }
         }, 200);
-        // console.log("Starting emulator...");
-        // worker.postMessage({ type: "start" });
-        // addToConsole("Starting emulator...");
+        console.log("Starting emulator...");
+        worker.postMessage({ type: "start" });
+        addToConsole("Starting emulator...");
     }
 
     function pause() {

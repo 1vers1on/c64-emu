@@ -2,7 +2,7 @@
 
 #include <cstdint>
 #include <cstddef>
-#include <bus.hpp>
+#include <C64Bus.hpp>
 #include <serial_bus.hpp>
 #include <functional>
 #include <tuple>
@@ -24,12 +24,12 @@
 #define TIMER_A_CONTROL_REGISTER 14
 #define TIMER_B_CONTROL_REGISTER 15
 
-class Bus;
+class C64Bus;
 class CPU;
 
 class CIA2 {
 public:
-    CIA2(Bus* bus, SerialBus* serialBus);
+    CIA2(C64Bus* bus, SerialBus* serialBus);
     ~CIA2();
 
     void write(uint16_t addr, uint8_t data);
@@ -62,7 +62,7 @@ private:
     uint16_t timerBReload;
     size_t lastCycle;
     CPU *cpu;
-    Bus *bus;
+    C64Bus *bus;
     SerialBus* serialBus;
     uint8_t registers[0x10];
     // uint8_t portA;

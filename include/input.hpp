@@ -6,6 +6,11 @@
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
+#include <C64Bus.hpp>
+#include <thread>
+#include <mutex>
+
+class C64Bus;
 
 const std::vector<std::string> keys = {
     "STOP", "Q", "C=", "SPACE", "2", "CTRL", "<-", "1",
@@ -21,15 +26,22 @@ const std::vector<std::string> keys = {
 // Only supports the keyboard right now
 class Input {
 public:
-    Input();
+    Input(C64Bus* bus);
     ~Input();
 
     void setKeyPressed(std::string key, bool pressed);
+    void writeString(std::string str);
 
     uint8_t readKeyMatrix(uint8_t row);
 
 private:
+    C64Bus* bus;
     uint8_t keyMatrix[8];
-    // std::vector<std::string> pressedKeys;
+    std::thread writeThread;
+    std::mutex writeMutex;
+    bool stopThread = false;
+    void writeStringInternal(std::string str);
+    void startWriteStringThread(std::string str);
+    void stopWriteStringThread();
     std::unordered_set<std::string> pressedKeys;
 };

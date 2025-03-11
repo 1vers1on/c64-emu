@@ -33,7 +33,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 add_executable(${PROJECT_NAME} ${C_SRC} ${CPP_SRC})
 
 # compiler & linker flags
-target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Werror)
+target_compile_options(${PROJECT_NAME} PRIVATE -Werror)
 target_link_libraries(${PROJECT_NAME} m)
 
 # build types
@@ -62,11 +62,12 @@ endforeach()
 target_sources(${PROJECT_NAME} PRIVATE ${ASM_OBJECTS})
 
 set(EMCXX em++)
-set(WASM_CFLAGS "-sWASM=1 -s EXPORTED_FUNCTIONS=\"['_startEmulator','_getFramebuffer','_keyDown','_keyUp','_getClockSpeed','_writeToMemory','_readFromMemory','_reset','_paused','_resume','_getMemory','_getDiffSize','_getDiff']\" -sMODULARIZE -sEXPORT_ES6 --no-entry -s EXPORTED_RUNTIME_METHODS=\"['ccall','cwrap']\" -O3 -flto -sASYNCIFY -sWASM_BIGINT=1 -sALLOW_MEMORY_GROWTH=1")
-set(WASM_LDFLAGS "-sALLOW_MEMORY_GROWTH=1 -sENVIRONMENT=web --no-entry -flto -O3")
+set(WASM_CFLAGS -s WASM=1 -s EXPORTED_FUNCTIONS="['_startEmulator','_getFramebuffer','_keyDown','_keyUp','_getClockSpeed','_writeToMemory','_readFromMemory','_reset','_paused','_resume','_getMemory','_getDiffSize','_getDiff','_getSidState']" -s MODULARIZE -s EXPORT_ES6 --no-entry -s EXPORTED_RUNTIME_METHODS="['ccall','cwrap']" -O3 -flto -s ASYNCIFY -s WASM_BIGINT=1 -s ALLOW_MEMORY_GROWTH=1)
+set(WASM_LDFLAGS -s ALLOW_MEMORY_GROWTH=1 -s ENVIRONMENT=web --no-entry -flto -O3 -lembind)
+set(NORMAL_CFLAGS ${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS})
 
 add_custom_target(wasm
-    COMMAND ${EMCXX} ${WASM_CFLAGS} ${WASM_LDFLAGS} -o svelte/static/${PROJECT_NAME}.js ${CPP_SRC} ${C_SRC}
+    COMMAND ${EMCXX} ${WASM_CFLAGS} ${WASM_LDFLAGS} ${NORMAL_CFLAGS} -I${CMAKE_SOURCE_DIR}/include -o ${CMAKE_SOURCE_DIR}/svelte/static/main.js ${CPP_SRC} ${C_SRC}
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 )
 

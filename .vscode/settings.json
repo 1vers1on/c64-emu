@@ -88,6 +88,7 @@
         "set": "cpp",
         "any": "cpp",
         "future": "cpp",
-        "coroutine": "cpp"
+        "coroutine": "cpp",
+        "*.inc": "cpp"
     }
 }

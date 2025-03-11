@@ -41,6 +41,11 @@ function print(text) {
     postMessage({ type: "print", text: text });
 }
 
+self.sidStateChanged = function() {
+    const sidState = Module.getSidState();
+    print(JSON.stringify(sidState));
+}
+
 function printErr(text) {
     postMessage({ type: "printErr", text: text });
 }

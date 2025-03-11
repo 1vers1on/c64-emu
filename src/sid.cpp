@@ -7,12 +7,6 @@ SID::SID() {
     voice2 = {};
     voice3 = {};
     filter = {};
-
-    voice1.frequency = 1000;
-
-    // voice1.envelope = new ADSREnvelope(0, 0, 0, 0);
-    // voice2.envelope = new ADSREnvelope(0, 0, 0, 0);
-    // voice3.envelope = new ADSREnvelope(0, 0, 0, 0);
 }
 
 static float pulseWave(Voice& voice) {
@@ -126,6 +120,9 @@ void SID::write(uint16_t addr, uint8_t value) {
     addr &= 0x1F; // 5 bits
     std::cout << "SID write to address: " << std::hex << addr
               << " with data: " << static_cast<int>(value) << std::dec << std::endl;
+    if(writeCallback) {
+        writeCallback();
+    }
     switch(addr) {
     case 0x00:
         voice1.frequency = (voice1.frequency & 0xFF00) | value;
@@ -187,11 +184,6 @@ void SID::write(uint16_t addr, uint8_t value) {
         voice2.sawtoothEnabled = value & 0x20;
         voice2.pulseEnabled = value & 0x40;
         voice2.noiseEnabled = value & 0x80;
-        // if (voice2.voiceOn) {
-        //     voice2.envelope->noteOn();
-        // } else {
-        //     voice2.envelope->noteOff();
-        // }
         break;
     case 0x0C:
         voice2.decayTimeMs = decodeDecayTime(value);
@@ -199,7 +191,6 @@ void SID::write(uint16_t addr, uint8_t value) {
         break;
     case 0x0D:
         voice2.releaseTimeMs = decodeDecayTime(value);
-        // voice2.sustainVolume = (value >> 4) & 0x0F;
         if(static_cast<float>((value >> 4) & 0x0F) == 0) {
             voice2.sustainVolume = 0.0f;
         } else {
@@ -230,11 +221,6 @@ void SID::write(uint16_t addr, uint8_t value) {
         voice3.sawtoothEnabled = value & 0x20;
         voice3.pulseEnabled = value & 0x40;
         voice3.noiseEnabled = value & 0x80;
-        // if (voice3.voiceOn) {
-        //     voice3.envelope->noteOn();
-        // } else {
-        //     voice3.envelope->noteOff();
-        // }
         break;
     case 0x13:
         voice3.decayTimeMs = decodeDecayTime(value);

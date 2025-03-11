@@ -3,16 +3,16 @@
 #include <cstdint>
 #include <cstddef>
 #include <functional>
-#include <bus.hpp>
+#include <C64Bus.hpp>
 #include <cpu.hpp>
 
 #define PAL 1
 
-class Bus;
+class C64Bus;
 
 class VIC {
 public:
-    VIC(Bus* bus);
+    VIC(C64Bus* bus);
 
     ~VIC();
 
@@ -44,7 +44,7 @@ private:
     void handleDMASteal();
     void renderScanline();
     CPU* cpu;
-    Bus* bus;
+    C64Bus* bus;
     std::function<void(std::array<uint32_t, 40 * 25 * 8 * 8>&)> framebufferCallback;
     uint16_t rasterLine = 0; // current raster line
     size_t rasterCycle = 0; // current raster cycle

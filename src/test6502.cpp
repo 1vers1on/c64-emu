@@ -1,5 +1,5 @@
 #ifdef TEST_6502
-#include <bus.hpp>
+#include <C64Bus.hpp>
 #include <chrono>
 #include <cpu.hpp>
 #include <fstream>
@@ -8,7 +8,7 @@
 #include <vector>
 
 int main() {
-    Bus bus;
+    C64Bus bus;
     CPU cpu(&bus);
 
     std::ifstream file("6502test.bin", std::ios::binary | std::ios::in);

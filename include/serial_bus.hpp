@@ -21,6 +21,8 @@ public:
     void CIAWrite(SerialPortState data);
     SerialPortState Read(bool tick = true);
 
+    void printState();
+
     std::vector<SerialDevice*> devices;
 
 private:

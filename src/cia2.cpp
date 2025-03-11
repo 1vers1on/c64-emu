@@ -6,7 +6,7 @@
 #include <serial_bus.hpp>
 #
 
-CIA2::CIA2(Bus* bus, SerialBus* serial) {
+CIA2::CIA2(C64Bus* bus, SerialBus* serial) {
     this->bus = bus;
     for(int i = 0; i < 0x10; i++) {
         registers[i] = 0x00;
@@ -63,7 +63,7 @@ void CIA2::write(uint16_t addr, uint8_t data) {
             break;
         }
         // print it as a bitset
-        std::cout << "Port A: " << std::bitset<8>(registers[PORTA]) << std::endl;
+        // std::cout << "Port A: " << std::bitset<8>(registers[PORTA]) << std::endl;
         uint8_t serialData = (registers[PORTA] & ~0b11000111);
         serialData &= registers[DIRECTION_REGISTER_A];
         serialData |= (oldRegister & ~registers[DIRECTION_REGISTER_A]);
@@ -71,8 +71,10 @@ void CIA2::write(uint16_t addr, uint8_t data) {
         bool atnFlagOut = serialData & 0x01;
         bool clockFlagOut = serialData & 0x02;
         bool dataFlagOut = serialData & 0x04;
-        std::cout << "ATN: " << atnFlagOut << " CLK: " << clockFlagOut << " DATA: " << dataFlagOut
+        std::cout << "From cia, ATN: " << atnFlagOut << " CLK: " << clockFlagOut << " DATA: " << dataFlagOut
                   << std::endl;
+
+        std::cout << std::hex << cpu->PC << std::dec << std::endl;
         serialBus->CIAWrite({dataFlagOut, clockFlagOut, atnFlagOut});
         break;
     }

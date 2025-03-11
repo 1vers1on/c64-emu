@@ -4,7 +4,7 @@
 #include <iostream>
 #include <vic.hpp>
 
-VIC::VIC(Bus* bus) {
+VIC::VIC(C64Bus* bus) {
     this->bus = bus;
     // using std::fill to initialize registers
     std::fill(registers, registers + 0x2F, 0x00);

@@ -1,7 +1,7 @@
 #include <cia1.hpp>
 #include <cpu.hpp>
 
-CIA1::CIA1(Bus* bus) {
+CIA1::CIA1(C64Bus* bus) {
     this->bus = bus;
     for(int i = 0; i < 0x10; i++) {
         registers[i] = 0x00;

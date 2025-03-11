@@ -1,6 +1,6 @@
 #pragma once
 
-#include <bus.hpp>
+#include <C64Bus.hpp>
 #include <cpu.hpp>
 #include <cia1.hpp>
 #include <cia2.hpp>
@@ -25,7 +25,7 @@ public:
     int clockSpeed;
 
     CPU* cpu;
-    Bus* bus;
+    C64Bus* bus;
     CIA1* cia1;
     CIA2* cia2;
     VIC* vic;
